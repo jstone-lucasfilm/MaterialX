@@ -64,7 +64,7 @@ def main():
     # Bake the resulting material to flat textures.
     baseType = mx_render.BaseType.FLOAT if opts.hdr else mx_render.BaseType.UINT8
     baker = mx_render_glsl.TextureBaker.create(opts.width, opts.height, baseType)
-    baker.setOptimizeConstants(False)
+    #baker.setOptimizeConstants(False)
     baker.bakeAllMaterials(doc, searchPath, opts.outputFilename)
 
 if __name__ == '__main__':
