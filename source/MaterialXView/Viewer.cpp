@@ -64,6 +64,7 @@ void applyModifiers(mx::DocumentPtr doc, const DocumentModifiers& modifiers)
 {
     for (mx::ElementPtr elem : doc->traverseTree())
     {
+        // Apply the given set of modifiers.
         if (modifiers.remapElements.count(elem->getCategory()))
         {
             elem->setCategory(modifiers.remapElements.at(elem->getCategory()));
@@ -96,6 +97,14 @@ void applyModifiers(mx::DocumentPtr doc, const DocumentModifiers& modifiers)
             {
                 elem->removeChild(child->getName());
             }
+        }
+
+        // Remap references to unsupported texture coordinates.
+        if (elem->isA<mx::Input>() &&
+            elem->getName() == "index" &&
+            elem->getParent()->getCategory() == "texcoord")
+        {
+            elem->asA<mx::Input>()->setValue(0);
         }
     }
 
