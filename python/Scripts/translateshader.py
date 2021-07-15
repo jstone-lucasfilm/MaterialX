@@ -12,12 +12,15 @@ from MaterialX import PyMaterialXGenGlsl as ms_gen_glsl
 from MaterialX import PyMaterialXRender as mx_render
 from MaterialX import PyMaterialXRenderGlsl as mx_render_glsl
 
-def main():
+def greatestPowerOfTwo(num):
+    power = int(math.log(num, 2))
+    return int(pow(2, power))
 
+def main():
     parser = argparse.ArgumentParser(description="Generate a translated baked version of each material in the input document.")
-    parser.add_argument("--width", dest="width", type=int, default=1024, help="Specify the width of baked textures.")
-    parser.add_argument("--height", dest="height", type=int, default=1024, help="Specify the height of baked textures.")
     parser.add_argument("--hdr", dest="hdr", action="store_true", help="Save images to hdr format.")
+    parser.add_argument("--maxSize", dest="maxSize", type=int, default=0, help="Specify an optional maximum for the width and height of baked documents.")
+    parser.add_argument("--powerOfTwo", dest="powerOfTwo", action="store_true", help="Optionally clip texture dimensions to the largest powers of below the computed values.")
     parser.add_argument("--path", dest="paths", action='append', nargs='+', help="An additional absolute search path location (e.g. '/projects/MaterialX')")
     parser.add_argument("--library", dest="libraries", action='append', nargs='+', help="An additional relative path to a custom data library folder (e.g. 'libraries/custom')")
     parser.add_argument(dest="inputFilename", help="Filename of the input document.")
@@ -61,10 +64,32 @@ def main():
         print(err)
         sys.exit(0)
         
+    # Query the UDIM set of the document.
+    udimSetValue = doc.getGeomPropValue('udimset')
+    udimSet = udimSetValue.getData() if udimSetValue else []
+
+    # Compute baking resolution and cache source images.
+    imageHandler = mx_render.ImageHandler.create(mx_render.StbImageLoader.create())
+    imageHandler.setSearchPath(searchPath)
+    if udimSet:
+        resolver = doc.createStringResolver()
+        resolver.setUdimString(udimSet[0])
+        imageHandler.setFilenameResolver(resolver)
+    imageVec = imageHandler.getReferencedImages(doc)
+    bakeWidth, bakeHeight = mx_render.getMaxDimensions(imageVec)
+    if opts.maxSize > 0:
+        bakeWidth = min(bakeWidth, maxSize)
+        bakeHeight = min(bakeHeight, maxSize)
+    if opts.powerOfTwo:
+        bakeWidth = greatestPowerOfTwo(bakeWidth)
+        bakeHeight = greatestPowerOfTwo(bakeHeight)
+    bakeWidth = max(bakeWidth, 4)
+    bakeHeight = max(bakeHeight, 4)
+
     # Bake the resulting material to flat textures.
     baseType = mx_render.BaseType.FLOAT if opts.hdr else mx_render.BaseType.UINT8
-    baker = mx_render_glsl.TextureBaker.create(opts.width, opts.height, baseType)
-    #baker.setOptimizeConstants(False)
+    baker = mx_render_glsl.TextureBaker.create(bakeWidth, bakeHeight, baseType)
+    baker.setImageHandler(imageHandler)
     baker.bakeAllMaterials(doc, searchPath, opts.outputFilename)
 
 if __name__ == '__main__':
