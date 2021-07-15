@@ -72,24 +72,25 @@ def main():
     imageHandler = mx_render.ImageHandler.create(mx_render.StbImageLoader.create())
     imageHandler.setSearchPath(searchPath)
     if udimSet:
+        print('Found UDIM set:', udimSet)
         resolver = doc.createStringResolver()
         resolver.setUdimString(udimSet[0])
         imageHandler.setFilenameResolver(resolver)
     imageVec = imageHandler.getReferencedImages(doc)
     bakeWidth, bakeHeight = mx_render.getMaxDimensions(imageVec)
     if opts.maxSize > 0:
-        bakeWidth = min(bakeWidth, maxSize)
-        bakeHeight = min(bakeHeight, maxSize)
+        bakeWidth = min(bakeWidth, opts.maxSize)
+        bakeHeight = min(bakeHeight, opts.maxSize)
     if opts.powerOfTwo:
         bakeWidth = greatestPowerOfTwo(bakeWidth)
         bakeHeight = greatestPowerOfTwo(bakeHeight)
     bakeWidth = max(bakeWidth, 4)
     bakeHeight = max(bakeHeight, 4)
+    print('Baking resolution:', bakeWidth, bakeHeight)
 
     # Bake the resulting material to flat textures.
     baseType = mx_render.BaseType.FLOAT if opts.hdr else mx_render.BaseType.UINT8
     baker = mx_render_glsl.TextureBaker.create(bakeWidth, bakeHeight, baseType)
-    baker.setImageHandler(imageHandler)
     baker.bakeAllMaterials(doc, searchPath, opts.outputFilename)
 
 if __name__ == '__main__':
