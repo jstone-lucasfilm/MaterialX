@@ -106,6 +106,7 @@ def main():
     # Bake translated materials to flat textures.
     baseType = mx_render.BaseType.FLOAT if opts.hdr else mx_render.BaseType.UINT8
     baker = mx_render_glsl.TextureBaker.create(bakeWidth, bakeHeight, baseType)
+    baker.setColorSpace(opts.outputColorSpace)
     baker.bakeAllMaterials(doc, searchPath, opts.outputFilename)
 
 if __name__ == '__main__':
