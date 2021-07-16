@@ -21,7 +21,8 @@ def main():
     parser.add_argument("--width", dest="width", type=int, default=0, help="Specify an optional width for baked textures (defaults to the maximum image height in the source document).")
     parser.add_argument("--height", dest="height", type=int, default=0, help="Specify an optional height for baked textures (defaults to the maximum image width in the source document).")
     parser.add_argument("--powerOfTwo", dest="powerOfTwo", action="store_true", help="Request that texture dimensions be clipped to the largest powers of below their computed values.")
-    parser.add_argument("--hdr", dest="hdr", action="store_true", help="Save images to hdr format.")
+    parser.add_argument("--hdr", dest="hdr", action="store_true", help="Bake images with high dynamic range (e.g. in HDR or EXR format).")
+    parser.add_argument("--outputColorSpace", dest="outputColorSpace", type=str, help="When HDR baking is selected, specify the output color space for textures (defaults to lin_rec709).")
     parser.add_argument("--path", dest="paths", action='append', nargs='+', help="An additional absolute search path location (e.g. '/projects/MaterialX')")
     parser.add_argument("--library", dest="libraries", action='append', nargs='+', help="An additional relative path to a custom data library folder (e.g. 'libraries/custom')")
     parser.add_argument(dest="inputFilename", help="Filename of the input document.")
@@ -71,7 +72,7 @@ def main():
     imageVec = imageHandler.getReferencedImages(doc)
     bakeWidth, bakeHeight = mx_render.getMaxDimensions(imageVec)
 
-    # Apply user settings to baking resolution.
+    # Apply baking resolution settings.
     if opts.width > 0:
         bakeWidth = opts.width
     if opts.height > 0:
@@ -81,6 +82,12 @@ def main():
         bakeHeight = greatestPowerOfTwo(bakeHeight)
     bakeWidth = max(bakeWidth, 4)
     bakeHeight = max(bakeHeight, 4)
+
+    # Apply color space settings.
+    if opts.outputColorSpace:
+        if not opts.hdr:
+            print('Output color space is only supported for HDR baking.')
+            sys.exit(0)
 
     # Translate materials between shading models
     translator = mx_gen_shader.ShaderTranslator.create()
