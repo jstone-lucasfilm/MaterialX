@@ -85,6 +85,9 @@ def main():
 
     # Apply color space settings.
     if opts.outputColorSpace:
+        supportedColorSpaces = ('lin_rec709', 'lin_ap1', 'g22_rec709', 'g22_ap1')
+        if opts.outputColorSpace not in supportedColorSpaces:
+            print('Output color space not supported:', opts.outputColorSpace)
         if not opts.hdr:
             print('Output color space is only supported for HDR baking.')
             sys.exit(0)
