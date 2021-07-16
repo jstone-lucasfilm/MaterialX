@@ -87,13 +87,16 @@ def main():
     if opts.outputColorSpace:
         supportedColorSpaces = ('lin_rec709', 'lin_ap1', 'g22_rec709', 'g22_ap1')
         colorSpaceRemap = {'gamma22' : 'g22_rec709', 'acescg' : 'lin_ap1'}
-        if opts.outputColorSpace in colorSpaceRemap:
-            opts.outputColorSpace = colorSpaceRemap[opts.outputColorSpace]
-        if opts.outputColorSpace not in supportedColorSpaces:
-            print('Output color space not supported:', opts.outputColorSpace)
+        standardColorSpace = colorSpaceRemap[opts.outputColorSpace] if opts.outputColorSpace in colorSpaceRemap else opts.outputColorSpace
+        if standardColorSpace not in supportedColorSpaces:
+            print('Output color space not supported:', logicalColorSpace)
         if not opts.hdr:
             print('Output color space is only supported for HDR baking.')
             sys.exit(0)
+        if standardColorSpace.endswith('ap1'):
+            print('Applying rec709 to ap1')
+        if standardColorSpace.startswith('g22'):
+            print('Applying g22 encoding')
 
     # Translate materials between shading models
     translator = mx_gen_shader.ShaderTranslator.create()
