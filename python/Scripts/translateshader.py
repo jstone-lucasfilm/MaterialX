@@ -20,7 +20,7 @@ def main():
     parser = argparse.ArgumentParser(description="Generate a translated baked version of each material in the input document.")
     parser.add_argument("--width", dest="width", type=int, default=0, help="Specify an optional width for baked textures (defaults to the maximum image height in the source document).")
     parser.add_argument("--height", dest="height", type=int, default=0, help="Specify an optional height for baked textures (defaults to the maximum image width in the source document).")
-    parser.add_argument("--powerOfTwo", dest="powerOfTwo", action="store_true", help="Optionally clip texture dimensions to the largest powers of below the computed values.")
+    parser.add_argument("--powerOfTwo", dest="powerOfTwo", action="store_true", help="Request that texture dimensions be clipped to the largest powers of below their computed values.")
     parser.add_argument("--hdr", dest="hdr", action="store_true", help="Save images to hdr format.")
     parser.add_argument("--path", dest="paths", action='append', nargs='+', help="An additional absolute search path location (e.g. '/projects/MaterialX')")
     parser.add_argument("--library", dest="libraries", action='append', nargs='+', help="An additional relative path to a custom data library folder (e.g. 'libraries/custom')")
@@ -57,28 +57,21 @@ def main():
         print("Validation warnings for input document:")
         print(msg)
 
-    # Translate between shading models
-    translator = mx_gen_shader.ShaderTranslator.create()
-    try:
-        translator.translateAllMaterials(doc, opts.destShader)
-    except mx.Exception as err:
-        print(err)
-        sys.exit(0)
-        
-    # Query the UDIM set of the document.
+    # Check the document for a UDIM set.
     udimSetValue = doc.getGeomPropValue('udimset')
     udimSet = udimSetValue.getData() if udimSetValue else []
 
-    # Compute baking resolution and cache source images.
+    # Compute baking resolution from the source document.
     imageHandler = mx_render.ImageHandler.create(mx_render.StbImageLoader.create())
     imageHandler.setSearchPath(searchPath)
     if udimSet:
-        print('Found UDIM set:', udimSet)
         resolver = doc.createStringResolver()
         resolver.setUdimString(udimSet[0])
         imageHandler.setFilenameResolver(resolver)
     imageVec = imageHandler.getReferencedImages(doc)
     bakeWidth, bakeHeight = mx_render.getMaxDimensions(imageVec)
+
+    # Apply user settings to baking resolution.
     if opts.width > 0:
         bakeWidth = opts.width
     if opts.height > 0:
@@ -88,9 +81,16 @@ def main():
         bakeHeight = greatestPowerOfTwo(bakeHeight)
     bakeWidth = max(bakeWidth, 4)
     bakeHeight = max(bakeHeight, 4)
-    print('Baking resolution:', bakeWidth, bakeHeight)
 
-    # Bake the resulting material to flat textures.
+    # Translate materials between shading models
+    translator = mx_gen_shader.ShaderTranslator.create()
+    try:
+        translator.translateAllMaterials(doc, opts.destShader)
+    except mx.Exception as err:
+        print(err)
+        sys.exit(0)
+        
+    # Bake translated materials to flat textures.
     baseType = mx_render.BaseType.FLOAT if opts.hdr else mx_render.BaseType.UINT8
     baker = mx_render_glsl.TextureBaker.create(bakeWidth, bakeHeight, baseType)
     baker.bakeAllMaterials(doc, searchPath, opts.outputFilename)
