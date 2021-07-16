@@ -18,9 +18,10 @@ def greatestPowerOfTwo(num):
 
 def main():
     parser = argparse.ArgumentParser(description="Generate a translated baked version of each material in the input document.")
-    parser.add_argument("--hdr", dest="hdr", action="store_true", help="Save images to hdr format.")
-    parser.add_argument("--maxSize", dest="maxSize", type=int, default=0, help="Specify an optional maximum for the width and height of baked documents.")
+    parser.add_argument("--width", dest="width", type=int, default=0, help="Specify an optional width for baked textures (defaults to the maximum image height in the source document).")
+    parser.add_argument("--height", dest="height", type=int, default=0, help="Specify an optional height for baked textures (defaults to the maximum image width in the source document).")
     parser.add_argument("--powerOfTwo", dest="powerOfTwo", action="store_true", help="Optionally clip texture dimensions to the largest powers of below the computed values.")
+    parser.add_argument("--hdr", dest="hdr", action="store_true", help="Save images to hdr format.")
     parser.add_argument("--path", dest="paths", action='append', nargs='+', help="An additional absolute search path location (e.g. '/projects/MaterialX')")
     parser.add_argument("--library", dest="libraries", action='append', nargs='+', help="An additional relative path to a custom data library folder (e.g. 'libraries/custom')")
     parser.add_argument(dest="inputFilename", help="Filename of the input document.")
@@ -78,9 +79,10 @@ def main():
         imageHandler.setFilenameResolver(resolver)
     imageVec = imageHandler.getReferencedImages(doc)
     bakeWidth, bakeHeight = mx_render.getMaxDimensions(imageVec)
-    if opts.maxSize > 0:
-        bakeWidth = min(bakeWidth, opts.maxSize)
-        bakeHeight = min(bakeHeight, opts.maxSize)
+    if opts.width > 0:
+        bakeWidth = opts.width
+    if opts.height > 0:
+        bakeHeight = opts.height
     if opts.powerOfTwo:
         bakeWidth = greatestPowerOfTwo(bakeWidth)
         bakeHeight = greatestPowerOfTwo(bakeHeight)
