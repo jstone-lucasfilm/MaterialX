@@ -86,6 +86,9 @@ def main():
     # Apply color space settings.
     if opts.outputColorSpace:
         supportedColorSpaces = ('lin_rec709', 'lin_ap1', 'g22_rec709', 'g22_ap1')
+        colorSpaceRemap = {'gamma22' : 'g22_rec709', 'acescg' : 'lin_ap1'}
+        if opts.outputColorSpace in colorSpaceRemap:
+            opts.outputColorSpace = colorSpaceRemap[opts.outputColorSpace]
         if opts.outputColorSpace not in supportedColorSpaces:
             print('Output color space not supported:', opts.outputColorSpace)
         if not opts.hdr:
