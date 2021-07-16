@@ -97,6 +97,9 @@ def main():
             print('Applying rec709 to ap1')
         if standardColorSpace.startswith('g22'):
             print('Applying g22 encoding')
+        for material in doc.getMaterialNodes():
+            for shader in mx.getShaderNodes(material):
+                print('Found shader:', shader.getCategory())
 
     # Translate materials between shading models
     translator = mx_gen_shader.ShaderTranslator.create()
