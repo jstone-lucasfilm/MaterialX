@@ -455,8 +455,8 @@ int Graph::findLinkPosition(int id)
 
 bool Graph::checkPosition(UiNodePtr node)
 {
-    return node->getMxElement() &&
-           !node->getMxElement()->getAttribute(mx::Element::XPOS_ATTRIBUTE).empty();
+    mx::ElementPtr elem = node->getElement();
+    return elem && !elem->getAttribute(mx::Element::XPOS_ATTRIBUTE).empty();
 }
 
 // Calculate the total vertical space the node level takes up
@@ -549,12 +549,13 @@ ImVec2 Graph::layoutPosition(UiNodePtr layoutNode, ImVec2 startingPos, bool init
                 // Don't set position of group nodes
                 if (node->getMessage().empty())
                 {
-                    if (node->getMxElement()->hasAttribute(mx::Element::XPOS_ATTRIBUTE))
+                    mx::ElementPtr elem = node->getElement();
+                    if (elem && elem->hasAttribute(mx::Element::XPOS_ATTRIBUTE))
                     {
-                        float x = std::stof(node->getMxElement()->getAttribute(mx::Element::XPOS_ATTRIBUTE));
-                        if (node->getMxElement()->hasAttribute(mx::Element::YPOS_ATTRIBUTE))
+                        float x = std::stof(elem->getAttribute(mx::Element::XPOS_ATTRIBUTE));
+                        if (elem->hasAttribute(mx::Element::YPOS_ATTRIBUTE))
                         {
-                            float y = std::stof(node->getMxElement()->getAttribute(mx::Element::YPOS_ATTRIBUTE));
+                            float y = std::stof(elem->getAttribute(mx::Element::YPOS_ATTRIBUTE));
                             x *= DEFAULT_NODE_SIZE.x;
                             y *= DEFAULT_NODE_SIZE.y;
                             ed::SetNodePosition(node->getId(), ImVec2(x, y));
@@ -1759,7 +1760,7 @@ void Graph::copyUiNode(UiNodePtr node)
 {
     UiNodePtr copyNode = std::make_shared<UiNode>(mx::EMPTY_STRING, int(_graphTotalSize + 1));
     ++_graphTotalSize;
-    if (node->getMxElement())
+    if (node->getElement())
     {
         std::string newName = _currGraphElem->createValidChildName(node->getName());
         if (node->getNode())
@@ -1785,7 +1786,7 @@ void Graph::copyUiNode(UiNodePtr node)
             mxOutput->setName(newName);
             copyNode->setOutput(mxOutput);
         }
-        copyNode->getMxElement()->setName(newName);
+        copyNode->getElement()->setName(newName);
         copyNode->setName(newName);
     }
     else if (node->getNodeGraph())
@@ -4096,7 +4097,7 @@ void Graph::drawGraph(ImVec2 mousePos)
             if (_graphNodes.size() > 0)
             {
 
-                if (outputNum.size() == 0 && _graphNodes[0]->getMxElement())
+                if (outputNum.size() == 0 && _graphNodes[0]->getElement())
                 {
                     for (UiNodePtr node : _graphNodes)
                     {
@@ -4436,16 +4437,17 @@ void Graph::savePosition()
 {
     for (UiNodePtr node : _graphNodes)
     {
-        if (node->getMxElement())
+        mx::ElementPtr elem = node->getElement();
+        if (elem)
         {
             ImVec2 pos = ed::GetNodePosition(node->getId());
             pos.x /= DEFAULT_NODE_SIZE.x;
             pos.y /= DEFAULT_NODE_SIZE.y;
-            node->getMxElement()->setAttribute(mx::Element::XPOS_ATTRIBUTE, std::to_string(pos.x));
-            node->getMxElement()->setAttribute(mx::Element::YPOS_ATTRIBUTE, std::to_string(pos.y));
-            if (node->getMxElement()->hasAttribute("nodedef"))
+            elem->setAttribute(mx::Element::XPOS_ATTRIBUTE, std::to_string(pos.x));
+            elem->setAttribute(mx::Element::YPOS_ATTRIBUTE, std::to_string(pos.y));
+            if (elem->hasAttribute("nodedef"))
             {
-                node->getMxElement()->removeAttribute("nodedef");
+                elem->removeAttribute("nodedef");
             }
         }
     }
