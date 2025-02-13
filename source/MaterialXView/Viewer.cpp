@@ -828,6 +828,13 @@ void Viewer::createAdvancedSettings(ng::ref<Widget> parent)
         _lightHandler->setRefractionTwoSided(enable);
     });
 
+    ng::ref<ng::CheckBox> forwardNormalBox = new ng::CheckBox(settingsGroup, "Forward-Facing Normal");
+    forwardNormalBox->set_checked(_lightHandler->getForwardFacingNormal());
+    forwardNormalBox->set_callback([this](bool enable)
+    {
+        _lightHandler->setForwardFacingNormal(enable);
+    });
+
     ng::ref<ng::CheckBox> shaderInterfaceBox = new ng::CheckBox(settingsGroup, "Reduce Shader Interface");
     shaderInterfaceBox->set_checked(_genContext.getOptions().shaderInterfaceType == mx::SHADER_INTERFACE_REDUCED);
     shaderInterfaceBox->set_callback([this](bool enable)

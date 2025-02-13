@@ -15,7 +15,7 @@ void mx_subsurface_bsdf(ClosureData closureData, float weight, vec3 color, vec3 
     vec3 P = closureData.P;
     float occlusion = closureData.occlusion;
 
-    N = mx_forward_facing_normal(N, V);
+    N = mx_forward_facing_normal(N, closureData);
 
     if (closureData.closureType == CLOSURE_TYPE_REFLECTION)
     {

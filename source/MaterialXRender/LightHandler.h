@@ -40,7 +40,8 @@ class MX_RENDER_API LightHandler
         _usePrefilteredMap(false),
         _envLightIntensity(1.0f),
         _envSampleCount(DEFAULT_ENV_SAMPLE_COUNT),
-        _refractionTwoSided(false)
+        _refractionTwoSided(false),
+        _forwardFacingNormal(true)
     {
     }
     virtual ~LightHandler() { }
@@ -175,6 +176,18 @@ class MX_RENDER_API LightHandler
         return _refractionTwoSided;
     }
 
+    /// Set the forward-facing normal property..
+    void setForwardFacingNormal(bool enable)
+    {
+        _forwardFacingNormal = enable;
+    }
+
+    /// Return the forward-facing normal property.
+    int getForwardFacingNormal() const
+    {
+        return _forwardFacingNormal;
+    }
+
     /// @}
     /// @name Albedo Table
     /// @{
@@ -263,6 +276,7 @@ class MX_RENDER_API LightHandler
     int _envSampleCount;
 
     bool _refractionTwoSided;
+    bool _forwardFacingNormal;
 
     ImagePtr _albedoTable;
 

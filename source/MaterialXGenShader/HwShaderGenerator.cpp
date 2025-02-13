@@ -80,6 +80,7 @@ const string T_ENV_IRRADIANCE                 = "$envIrradiance";
 const string T_ENV_LIGHT_INTENSITY            = "$envLightIntensity";
 const string T_ENV_PREFILTER_MIP              = "$envPrefilterMip";
 const string T_REFRACTION_TWO_SIDED           = "$refractionTwoSided";
+const string T_FORWARD_FACING_NORMAL          = "$forwardFacingNormal";
 const string T_ALBEDO_TABLE                   = "$albedoTable";
 const string T_ALBEDO_TABLE_SIZE              = "$albedoTableSize";
 const string T_AMB_OCC_MAP                    = "$ambOccMap";
@@ -136,6 +137,7 @@ const string ENV_IRRADIANCE                   = "u_envIrradiance";
 const string ENV_LIGHT_INTENSITY              = "u_envLightIntensity";
 const string ENV_PREFILTER_MIP                = "u_envPrefilterMip";
 const string REFRACTION_TWO_SIDED             = "u_refractionTwoSided";
+const string FORWARD_FACING_NORMAL            = "u_forwardFacingNormal";
 const string ALBEDO_TABLE                     = "u_albedoTable";
 const string ALBEDO_TABLE_SIZE                = "u_albedoTableSize";
 const string AMB_OCC_MAP                      = "u_ambOccMap";
@@ -229,6 +231,7 @@ HwShaderGenerator::HwShaderGenerator(SyntaxPtr syntax) :
     _tokenSubstitutions[HW::T_ENV_IRRADIANCE] = HW::ENV_IRRADIANCE;
     _tokenSubstitutions[HW::T_ENV_LIGHT_INTENSITY] = HW::ENV_LIGHT_INTENSITY;
     _tokenSubstitutions[HW::T_REFRACTION_TWO_SIDED] = HW::REFRACTION_TWO_SIDED;
+    _tokenSubstitutions[HW::T_FORWARD_FACING_NORMAL] = HW::FORWARD_FACING_NORMAL;
     _tokenSubstitutions[HW::T_ALBEDO_TABLE] = HW::ALBEDO_TABLE;
     _tokenSubstitutions[HW::T_ALBEDO_TABLE_SIZE] = HW::ALBEDO_TABLE_SIZE;
     _tokenSubstitutions[HW::T_SHADOW_MAP] = HW::SHADOW_MAP;
@@ -335,19 +338,23 @@ ShaderPtr HwShaderGenerator::createShader(const string& name, ElementPtr element
         psPrivateUniforms->add(Type::FLOAT, HW::T_AMB_OCC_GAIN, Value::createValue(1.0f));
     }
 
-    // Add uniforms for environment lighting.
+    // Add lighting uniforms.
     bool lighting = graph->hasClassification(ShaderNode::Classification::SHADER | ShaderNode::Classification::SURFACE) ||
                     graph->hasClassification(ShaderNode::Classification::BSDF);
-    if (lighting && context.getOptions().hwSpecularEnvironmentMethod != SPECULAR_ENVIRONMENT_NONE)
+    if (lighting)
     {
-        const Matrix44 yRotationPI = Matrix44::createScale(Vector3(-1, 1, -1));
-        psPrivateUniforms->add(Type::MATRIX44, HW::T_ENV_MATRIX, Value::createValue(yRotationPI));
-        psPrivateUniforms->add(Type::FILENAME, HW::T_ENV_RADIANCE);
-        psPrivateUniforms->add(Type::FLOAT, HW::T_ENV_LIGHT_INTENSITY, Value::createValue(1.0f));
-        psPrivateUniforms->add(Type::INTEGER, HW::T_ENV_RADIANCE_MIPS, Value::createValue<int>(1));
-        psPrivateUniforms->add(Type::INTEGER, HW::T_ENV_RADIANCE_SAMPLES, Value::createValue<int>(16));
-        psPrivateUniforms->add(Type::FILENAME, HW::T_ENV_IRRADIANCE);
-        psPrivateUniforms->add(Type::BOOLEAN, HW::T_REFRACTION_TWO_SIDED);
+        psPrivateUniforms->add(Type::BOOLEAN, HW::T_FORWARD_FACING_NORMAL);
+        if (context.getOptions().hwSpecularEnvironmentMethod != SPECULAR_ENVIRONMENT_NONE)
+        {
+            const Matrix44 yRotationPI = Matrix44::createScale(Vector3(-1, 1, -1));
+            psPrivateUniforms->add(Type::MATRIX44, HW::T_ENV_MATRIX, Value::createValue(yRotationPI));
+            psPrivateUniforms->add(Type::FILENAME, HW::T_ENV_RADIANCE);
+            psPrivateUniforms->add(Type::FLOAT, HW::T_ENV_LIGHT_INTENSITY, Value::createValue(1.0f));
+            psPrivateUniforms->add(Type::INTEGER, HW::T_ENV_RADIANCE_MIPS, Value::createValue<int>(1));
+            psPrivateUniforms->add(Type::INTEGER, HW::T_ENV_RADIANCE_SAMPLES, Value::createValue<int>(16));
+            psPrivateUniforms->add(Type::FILENAME, HW::T_ENV_IRRADIANCE);
+            psPrivateUniforms->add(Type::BOOLEAN, HW::T_REFRACTION_TWO_SIDED);
+        }
     }
 
     // Add uniforms for the directional albedo table.

@@ -193,7 +193,7 @@ void mx_chiang_hair_bsdf(ClosureData closureData, vec3 tint_R, vec3 tint_TT, vec
     vec3 V = closureData.V;
     vec3 L = closureData.L;
 
-    N = mx_forward_facing_normal(N, V);
+    N = mx_forward_facing_normal(N, closureData);
 
     bsdf.throughput = vec3(0.0);
 

@@ -52,12 +52,6 @@ vec3 mx_fresnel_schlick(float cosTheta, vec3 F0, vec3 F90, float exponent)
     return mix(F0, F90, pow(x, exponent));
 }
 
-// Enforce that the given normal is forward-facing from the specified view direction.
-vec3 mx_forward_facing_normal(vec3 N, vec3 V)
-{
-    return (dot(N, V) < 0.0) ? -N : N;
-}
-
 // https://www.graphics.rwth-aachen.de/publication/2/jgt.pdf
 float mx_golden_ratio_sequence(int i)
 {

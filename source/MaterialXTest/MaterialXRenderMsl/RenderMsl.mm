@@ -105,6 +105,7 @@ void MslShaderRenderTester::registerLights(mx::DocumentPtr document,
     _lightHandler->setEnvIrradianceMap(envIrradiance);
     _lightHandler->setEnvSampleCount(options.enableReferenceQuality ? 4096 : 1024);
     _lightHandler->setRefractionTwoSided(true);
+    _lightHandler->setForwardFacingNormal(false);
 }
 
 //

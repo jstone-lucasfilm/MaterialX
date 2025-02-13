@@ -13,7 +13,7 @@ void mx_conductor_bsdf(ClosureData closureData, float weight, vec3 ior_n, vec3 i
     vec3 V = closureData.V;
     vec3 L = closureData.L;
 
-    N = mx_forward_facing_normal(N, V);
+    N = mx_forward_facing_normal(N, closureData);
     float NdotV = clamp(dot(N, V), M_FLOAT_EPS, 1.0);
 
     FresnelData fd = mx_init_fresnel_conductor(ior_n, ior_k, thinfilm_thickness, thinfilm_ior);

@@ -7,7 +7,8 @@
 #define CLOSURE_TYPE_INDIRECT 3
 #define CLOSURE_TYPE_EMISSION 4
 
-struct ClosureData {
+struct ClosureData
+{
     int closureType;
     vec3 L;
     vec3 V;
@@ -15,3 +16,14 @@ struct ClosureData {
     vec3 P;
     float occlusion;
 };
+
+// Enforce that the given normal is forward-facing in the specified closure context.
+vec3 mx_forward_facing_normal(vec3 N, ClosureData closureData)
+{
+    if (!$forwardFacingNormal)
+    {
+        return N;
+    }
+
+    return (dot(closureData.N, closureData.V) < 0.0) ? -N : N;
+}

@@ -625,6 +625,7 @@ void GlslProgram::bindLighting(LightHandlerPtr lightHandler, ImageHandlerPtr ima
         }
     }
     bindUniform(HW::REFRACTION_TWO_SIDED, Value::createValue(lightHandler->getRefractionTwoSided()), false);
+    bindUniform(HW::FORWARD_FACING_NORMAL, Value::createValue(lightHandler->getForwardFacingNormal()), false);
 
     // Bind direct lighting properties.
     if (hasUniform(HW::NUM_ACTIVE_LIGHT_SOURCES))
