@@ -1,0 +1,4 @@
+void mx_oren_nayar_diffuse_bsdf(float weight, color albedo, float roughness, normal N, int energy_compensation, output BSDF bsdf)
+{
+    bsdf = weight * oren_nayar_diffuse_bsdf(normal(faceforward(N, I)), albedo, roughness);
+}

@@ -1,0 +1,4 @@
+void mx_conductor_bsdf(float weight, color ior, color extinction, vector2 roughness, float thinfilm_thickness, float thinfilm_ior, normal N, vector U, string distribution, output BSDF bsdf)
+{
+    bsdf = weight * conductor_bsdf(normal(faceforward(N, I)), U, roughness.x, roughness.y, ior, extinction, distribution, "thinfilm_thickness", thinfilm_thickness, "thinfilm_ior", thinfilm_ior);
+}

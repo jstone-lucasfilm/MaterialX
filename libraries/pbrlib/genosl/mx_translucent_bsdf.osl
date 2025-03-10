@@ -1,0 +1,4 @@
+void mx_translucent_bsdf(float weight, color albedo, normal N, output BSDF bsdf)
+{
+    bsdf = weight * translucent_bsdf(N, albedo);
+}

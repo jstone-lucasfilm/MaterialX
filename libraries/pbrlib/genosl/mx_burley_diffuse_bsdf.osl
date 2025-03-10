@@ -1,0 +1,4 @@
+void mx_burley_diffuse_bsdf(float weight, color albedo, float roughness, normal N, output BSDF bsdf)
+{
+    bsdf = weight * burley_diffuse_bsdf(normal(faceforward(N, I)), albedo, roughness);
+}
