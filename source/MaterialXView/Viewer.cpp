@@ -56,6 +56,7 @@ const float DEFAULT_CAMERA_ZOOM = 1.0f;
 
 namespace
 {
+
 #ifdef MATERIALXVIEW_METAL_BACKEND
 const bool USE_FLOAT_BUFFER = true;
 #else
@@ -82,6 +83,8 @@ const float IDEAL_ENV_MAP_RADIANCE = 6.0f;
 const float IDEAL_MESH_SPHERE_RADIUS = 2.0f;
 
 const float PI = std::acos(-1.0f);
+
+const std::string UDIM_SEPARATORS = "._";
 
 void writeTextFile(const std::string& text, const std::string& filePath)
 {
@@ -1501,6 +1504,16 @@ void Viewer::loadDocument(const mx::FilePath& filename, mx::DocumentPtr librarie
                 if (materialNode)
                 {
                     std::string udim = mat->getUdim();
+                    if (udim.empty())
+                    {
+                        for (const std::string& token : mx::splitString(materialNode->getName(), UDIM_SEPARATORS))
+                        {
+                            if (token.size() == 4 && std::all_of(token.begin(), token.end(), isdigit))
+                            {
+                                udim = token;
+                            }
+                        }
+                    }
                     if (!udim.empty())
                     {
                         for (mx::MeshPartitionPtr geom : _geometryList)
