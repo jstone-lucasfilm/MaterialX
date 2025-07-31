@@ -237,7 +237,7 @@ vec2 mx_fresnel_dielectric_polarized(float cosTheta, float ior)
     float cosTheta2 = mx_square(clamp(cosTheta, 0.0, 1.0));
     float sinTheta2 = 1.0 - cosTheta2;
 
-    float t0 = max(ior * ior - sinTheta2, 0.0);
+    float t0 = max(ior * ior - sinTheta2, M_FLOAT_EPS);
     float t1 = t0 + cosTheta2;
     float t2 = 2.0 * sqrt(t0) * cosTheta;
     float Rs = (t1 - t2) / (t1 + t2);
@@ -315,94 +315,46 @@ vec3 mx_fresnel_airy(float cosTheta, FresnelData fd)
     float eta1 = 1.0;
     float eta2 = max(fd.tf_ior, eta1);
     vec3 eta3 = (fd.model == FRESNEL_MODEL_SCHLICK) ? mx_f0_to_ior(fd.F0) : fd.ior;
-    vec3 kappa3 = (fd.model == FRESNEL_MODEL_SCHLICK) ? vec3(0.0) : fd.extinction;
+    vec3 kappa3 = fd.extinction;
     float cosThetaT = sqrt(1.0 - (1.0 - mx_square(cosTheta)) * mx_square(eta1 / eta2));
 
     // First interface
     vec2 R12 = mx_fresnel_dielectric_polarized(cosTheta, eta2 / eta1);
-    if (cosThetaT <= 0.0)
-    {
-        // Total internal reflection
-        R12 = vec2(1.0);
-    }
     vec2 T121 = vec2(1.0) - R12;
 
-    // Second interface
+    // Second interface and phase shift
     vec3 R23p, R23s;
-    if (fd.model == FRESNEL_MODEL_SCHLICK)
-    {
-        vec3 f = mx_fresnel_hoffman_schlick(cosThetaT, fd);
-        R23p = 0.5 * f;
-        R23s = 0.5 * f;
-    }
-    else
-    {
-        mx_fresnel_conductor_polarized(cosThetaT, eta3 / eta2, kappa3 / eta2, R23p, R23s);
-    }
-
-    // Phase shift
     float cosB = mx_cos(mx_atan(eta2 / eta1));
     vec2 phi21 = vec2(cosTheta < cosB ? 0.0 : M_PI, M_PI);
     vec3 phi23p, phi23s;
     if (fd.model == FRESNEL_MODEL_SCHLICK)
     {
-        phi23p = vec3((eta3[0] < eta2) ? M_PI : 0.0,
-                      (eta3[1] < eta2) ? M_PI : 0.0,
-                      (eta3[2] < eta2) ? M_PI : 0.0);
+        R23p = mx_fresnel_hoffman_schlick(cosThetaT, fd) * 0.5;
+        R23s = R23p;
+        phi23p = step(vec3(eta2), eta3) * M_PI;
         phi23s = phi23p;
     }
     else
     {
+        mx_fresnel_conductor_polarized(cosThetaT, eta3 / eta2, kappa3 / eta2, R23p, R23s);
         mx_fresnel_conductor_phase_polarized(cosThetaT, eta2, eta3, kappa3, phi23p, phi23s);
     }
-    vec3 r123p = max(sqrt(R12.x*R23p), 0.0);
-    vec3 r123s = max(sqrt(R12.y*R23s), 0.0);
-
-    // Iridescence term
-    vec3 I = vec3(0.0);
-    vec3 Cm, Sm;
 
     // Optical path difference
-    float distMeters = fd.tf_thickness * 1.0e-9;
+    float distMeters = fd.tf_thickness * 1e-9;
     float opd = 2.0 * eta2 * cosThetaT * distMeters;
 
-    // Iridescence term using spectral antialiasing for Parallel polarization
+    // Iridescence term using spectral antialiasing for parallel and perpendicular polarization.
+    vec3 R123p = R12.x * R23p;
+    vec3 R123s = R12.y * R23s;
+    vec3 Rs = (mx_square(T121.x) * R23p) / (1.0 - R123p);
+    vec3 Rp = (mx_square(T121.y) * R23s) / (1.0 - R123s);
+    vec3 I = (Rs + Rp + R12.x + R12.y) * 0.5 +
+             (Rs - T121.x) * sqrt(R123p) * mx_eval_sensitivity(opd, phi23p + vec3(phi21.x)) +
+             (Rp - T121.y) * sqrt(R123s) * mx_eval_sensitivity(opd, phi23s + vec3(phi21.y));
 
-    // Reflectance term for m=0 (DC term amplitude)
-    vec3 Rs = (mx_square(T121.x) * R23p) / (vec3(1.0) - R12.x*R23p);
-    I += R12.x + Rs;
-
-    // Reflectance term for m>0 (pairs of diracs)
-    Cm = Rs - T121.x;
-    for (int m=1; m<=2; m++)
-    {
-        Cm *= r123p;
-        Sm  = 2.0 * mx_eval_sensitivity(float(m) * opd, float(m)*(phi23p+vec3(phi21.x)));
-        I  += Cm*Sm;
-    }
-
-    // Iridescence term using spectral antialiasing for Perpendicular polarization
-
-    // Reflectance term for m=0 (DC term amplitude)
-    vec3 Rp = (mx_square(T121.y) * R23s) / (vec3(1.0) - R12.y*R23s);
-    I += R12.y + Rp;
-
-    // Reflectance term for m>0 (pairs of diracs)
-    Cm = Rp - T121.y;
-    for (int m=1; m<=2; m++)
-    {
-        Cm *= r123s;
-        Sm  = 2.0 * mx_eval_sensitivity(float(m) * opd, float(m)*(phi23s+vec3(phi21.y)));
-        I  += Cm*Sm;
-    }
-
-    // Average parallel and perpendicular polarization
-    I *= 0.5;
-
-    // Convert back to RGB reflectance
-    I = clamp(XYZ_TO_RGB * I, 0.0, 1.0);
-
-    return I;
+    // Convert back to RGB reflectance and return
+    return clamp(XYZ_TO_RGB * I, 0.0, 1.0);
 }
 
 FresnelData mx_init_fresnel_dielectric(float ior, float tf_thickness, float tf_ior)
