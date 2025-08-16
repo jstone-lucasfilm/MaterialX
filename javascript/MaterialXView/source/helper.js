@@ -212,7 +212,7 @@ function getWrapping(mode)
  */
 function getMinFilter(type, generateMipmaps)
 {
-    const filterType = generateMipmaps ? THREE.LinearMipMapLinearFilter : THREE.LinearFilter;
+    let filterType = generateMipmaps ? THREE.LinearMipMapLinearFilter : THREE.LinearFilter;
     if (type === 0)
     {
         filterType = generateMipmaps ? THREE.NearestMipMapNearestFilter : THREE.NearestFilter;
@@ -250,7 +250,7 @@ function setTextureParameters(texture, name, uniforms, flipY = true, generateMip
         texture.wrapT = getWrapping(vaddressmode);
     }
 
-    const filterType = uniforms.find(base + FILTER_TYPE_SUFFIX) ? uniforms.get(base + FILTER_TYPE_SUFFIX).value : -1;
+    const filterType = uniforms.find(base + FILTER_TYPE_SUFFIX) ? uniforms.find(base + FILTER_TYPE_SUFFIX).getValue().getData() : -1;
     texture.minFilter = getMinFilter(filterType, generateMipmaps);
 }
 

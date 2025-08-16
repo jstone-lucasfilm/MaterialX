@@ -127,7 +127,7 @@ function init()
         animate();
     }).catch(err =>
     {
-        console.error(Number.isInteger(err) ? this.getMx().getExceptionMessage(err) : err);
+        console.error(Number.isInteger(err) ? viewer.getMx().getExceptionMessage(err) : err);
     })
 
     // allow dropping files and directories

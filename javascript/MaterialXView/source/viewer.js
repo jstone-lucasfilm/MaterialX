@@ -182,7 +182,7 @@ export class Scene
 
                 if (!child.geometry.attributes.normal)
                 {
-                    var startNormalTime = performance.new();
+                    var startNormalTime = performance.now();
                     child.geometry.computeVertexNormals();
                     normalTime += performance.now() - startNormalTime;
                 }
@@ -1017,17 +1017,17 @@ export class Material
             let img = matTitle.getElementsByTagName('img')[0];
             if (materialName == elemPath)
             {
-                if (this._soloMaterial == elemPath)
+                if (viewer.getMaterial().getSoloMaterial() == elemPath)
                 {
                     img.src = 'public/shader_ball.svg';
                     matTitle.classList.remove('peditor_material_assigned');
-                    this._soloMaterial = "";
+                    viewer.getMaterial().setSoloMaterial("");
                 }
                 else
                 {
                     img.src = 'public/shader_ball2.svg';
                     matTitle.classList.add('peditor_material_assigned');
-                    this._soloMaterial = elemPath;
+                    viewer.getMaterial().setSoloMaterial(elemPath);
                 }
             }
             else
@@ -1036,7 +1036,7 @@ export class Material
                 matTitle.classList.remove('peditor_material_assigned');
             }
         }
-        viewer.getMaterial().updateMaterialAssignments(viewer, this._soloMaterial);
+        viewer.getMaterial().updateMaterialAssignments(viewer, viewer.getMaterial().getSoloMaterial());
     }
 
     //
