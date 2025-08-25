@@ -4,6 +4,7 @@ Verify that the given file is a valid MaterialX document.
 '''
 
 import argparse
+import os
 import sys
 
 import MaterialX as mx
@@ -12,26 +13,25 @@ def main():
     parser = argparse.ArgumentParser(description="Verify that the given file is a valid MaterialX document.")
     parser.add_argument("--resolve", dest="resolve", action="store_true", help="Resolve inheritance and string substitutions.")
     parser.add_argument("--verbose", dest="verbose", action="store_true", help="Print summary of elements found in the document.")
-    parser.add_argument("--stdlib", dest="stdlib", action="store_true", help="Import standard MaterialX libraries into the document.")
     parser.add_argument(dest="inputFilename", help="Filename of the input document.")
     opts = parser.parse_args()
 
-    # Load standard libraries if requested.
-    stdlib = None
-    if opts.stdlib:
-        stdlib = mx.createDocument()
-        try:
-            mx.loadLibraries(mx.getDefaultDataLibraryFolders(), mx.getDefaultDataSearchPath(), stdlib)            
-        except Exception as err:
-            print(err)
-            sys.exit(0)
+    # Load standard libraries.
+    stdlib = mx.createDocument()
+    searchPath = mx.getDefaultDataSearchPath()
+    searchPath.append(os.path.dirname(opts.inputFilename))
+    libraryFolders = mx.getDefaultDataLibraryFolders()
+    try:
+        mx.loadLibraries(libraryFolders, searchPath, stdlib)            
+    except Exception as err:
+        print(err)
+        sys.exit(0)
 
     # Read and validate the source document.
     doc = mx.createDocument()
     try:
         mx.readFromXmlFile(doc, opts.inputFilename)
-        if stdlib:
-            doc.setDataLibrary(stdlib)
+        doc.setDataLibrary(stdlib)
     except mx.ExceptionFileMissing as err:
         print(err)
         sys.exit(0)
