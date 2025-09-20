@@ -236,6 +236,21 @@ Note: when &lt;geompropvalueuniform> is added, the text in the first paragraph o
 
 ### Math Nodes
 
+<a id="node-minchannel"> </a>
+
+* **`minchannel`**: return the smallest channel value of the incoming color3, color4, vector2, vector3, or vector4.
+    * `in` (color3 or color4 or vector2 or vector3 or vector4): the input value or nodename
+
+<a id="node-maxchannel"> </a>
+
+* **`maxchannel`**: return the largest channel value of the incoming color3, color4, vector2, vector3, or vector4.
+    * `in` (color3 or color4 or vector2 or vector3 or vector4): the input value or nodename
+
+<a id="node-avgchannel"> </a>
+
+* **`avgchannel`**: return the average channel value of the incoming color3, color4, vector2, vector3, or vector4.
+    * `in` (color3 or color4 or vector2 or vector3 or vector4): the input value or nodename
+
 <a id="node-transformcolor"> </a>
 
 * **`transformcolor`**: transform the incoming color from one specified colorspace to another, ignoring any colorspace declarations that may have been provided upstream.  For color4 types, the alpha channel value is unaffected.
