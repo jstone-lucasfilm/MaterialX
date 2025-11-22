@@ -12,29 +12,96 @@ try:
 except Exception:
     DIFF_ENABLED = False
 
-def computeDiff(image1Path, image2Path, imageDiffPath):
+try:
+    # Install opencv-python and opencv-contrib-python via pip to enable Color Moment Hash computation.
+    import cv2
+    # Check if img_hash module is available (requires opencv-contrib-python)
+    if hasattr(cv2, 'img_hash'):
+        CMH_ENABLED = True
+    else:
+        print("Warning: cv2.img_hash not found. Install opencv-contrib-python to enable Color Moment Hash computation.")
+        CMH_ENABLED = False
+except ImportError:
+    CMH_ENABLED = False
+
+def computeColorMomentHash(image1Path, image2Path):
+    """
+    Compute Color Moment Hash distance between two images.
+    Returns the distance value (lower means more similar).
+    """
     try:
-        if os.path.exists(imageDiffPath):
-            os.remove(imageDiffPath)
+        if not CMH_ENABLED:
+            return None
+
+        if not os.path.exists(image1Path) or not os.path.exists(image2Path):
+            return None
+
+        # Read images using OpenCV
+        img1 = cv2.imread(image1Path)
+        img2 = cv2.imread(image2Path)
+
+        if img1 is None or img2 is None:
+            return None
+
+        # Create Color Moment Hash object
+        hasher = cv2.img_hash.ColorMomentHash_create()
+
+        # Compute hashes for both images
+        hash1 = hasher.compute(img1)
+        hash2 = hasher.compute(img2)
+
+        # Calculate the distance between the two hashes
+        # Lower values indicate more similar images
+        distance = hasher.compare(hash1, hash2)
+
+        return distance
+    except AttributeError as e:
+        # This typically means opencv-contrib-python is not installed
+        if 'img_hash' in str(e):
+            print("Error: cv2.img_hash not available. Please install opencv-contrib-python package.")
+        return None
+    except Exception as e:
+        print("Failed to compute Color Moment Hash between: " + image1Path + ", " + image2Path + ". Error: " + str(e))
+        return None
+
+def computeDiff(image1Path, image2Path, imageDiffPath):
+    """
+    Compute both RMS difference and Color Moment Hash distance between two images.
+    Returns a tuple (rmsValue, cmhDistance) or (None, None) on error.
+    """
+    try:
+        rmsValue = None
+        cmhDistance = None
 
         if not os.path.exists(image1Path):
             print ("Image diff input missing: " + image1Path)
-            return
+            return None, None
 
         if not os.path.exists(image2Path):
             print ("Image diff input missing: " + image2Path)
-            return
+            return None, None
 
-        image1 = Image.open(image1Path).convert('RGB')
-        image2 = Image.open(image2Path).convert('RGB')
-        diff = ImageChops.difference(image1, image2)
-        diff.save(imageDiffPath)
-        diffStat = ImageStat.Stat(diff)
-        return sum(diffStat.rms) / (3.0 * 255.0)
+        # Compute RMS difference
+        if DIFF_ENABLED:
+            if os.path.exists(imageDiffPath):
+                os.remove(imageDiffPath)
+
+            image1 = Image.open(image1Path).convert('RGB')
+            image2 = Image.open(image2Path).convert('RGB')
+            diff = ImageChops.difference(image1, image2)
+            diff.save(imageDiffPath)
+            diffStat = ImageStat.Stat(diff)
+            rmsValue = sum(diffStat.rms) / (3.0 * 255.0)
+
+        # Compute Color Moment Hash distance
+        cmhDistance = computeColorMomentHash(image1Path, image2Path)
+
+        return rmsValue, cmhDistance
     except Exception:
         if os.path.exists(imageDiffPath):
             os.remove(imageDiffPath)
         print ("Failed to create image diff between: " + image1Path + ", " + image2Path)
+        return None, None
 
 def main(args=None):
 
@@ -149,16 +216,17 @@ def main(args=None):
             fullPath3 = os.path.join(path3, file3) if file3 else None
             diffPath1 = diffPath2 = diffPath3 = None
             diffRms1 = diffRms2 = diffRms3 = None
+            cmhDist1 = cmhDist2 = cmhDist3 = None
 
             if file1 and file2 and DIFF_ENABLED and args.CREATE_DIFF:
                 diffPath1 = fullPath1[0:-8] + "_" + args.lang1 + "-1_vs_" + args.lang2 + "-2_diff.png"
-                diffRms1 = computeDiff(fullPath1, fullPath2, diffPath1)
+                diffRms1, cmhDist1 = computeDiff(fullPath1, fullPath2, diffPath1)
 
             if useThirdLang and file1 and file3 and DIFF_ENABLED and args.CREATE_DIFF:
                 diffPath2 = fullPath1[0:-8] + "_" + args.lang1 + "-1_vs_" + args.lang3 + "-3_diff.png"
-                diffRms2 = computeDiff(fullPath1, fullPath3, diffPath2)
+                diffRms2, cmhDist2 = computeDiff(fullPath1, fullPath3, diffPath2)
                 diffPath3 = fullPath1[0:-8] + "_" + args.lang2 + "-2_vs_" + args.lang3 + "-3_diff.png"
-                diffRms3 = computeDiff(fullPath2, fullPath3, diffPath3)
+                diffRms3, cmhDist3 = computeDiff(fullPath2, fullPath3, diffPath3)
 
             if args.error >= 0:
                 ok1 = (not diffPath1) or (not diffRms1) or (diffRms1 and diffRms1 <= args.error)
@@ -212,14 +280,14 @@ def main(args=None):
                     fh.write("<br>(" + str(datetime.datetime.fromtimestamp(os.path.getmtime(fullPath3))) + ")")
                 fh.write("</td>\n")
             if diffPath1:
-                rms = " (RMS " + "%.5f" % diffRms1 + ")" if diffRms1 else ""
-                fh.write("<td align='center'>" + args.lang1.upper() + " vs. " + args.lang2.upper() + rms + "</td>\n")
+                cmhStr = " (CMH %.3f)" % cmhDist1 if cmhDist1 is not None else ""
+                fh.write("<td align='center'>" + args.lang1.upper() + " vs. " + args.lang2.upper() + cmhStr + "</td>\n")
             if diffPath2:
-                rms = " (RMS " + "%.5f" % diffRms2 + ")" if diffRms2 else ""
-                fh.write("<td align='center'>" + args.lang1.upper() + " vs. " + args.lang3.upper() + rms + "</td>\n")
+                cmhStr = " (CMH %.3f)" % cmhDist2 if cmhDist2 is not None else ""
+                fh.write("<td align='center'>" + args.lang1.upper() + " vs. " + args.lang3.upper() + cmhStr + "</td>\n")
             if diffPath3:
-                rms = " (RMS " + "%.5f" % diffRms3 + ")" if diffRms3 else ""
-                fh.write("<td align='center'>" + args.lang2.upper() + " vs. " + args.lang3.upper() + rms + "</td>\n")
+                cmhStr = " (CMH %.3f)" % cmhDist3 if cmhDist3 is not None else ""
+                fh.write("<td align='center'>" + args.lang2.upper() + " vs. " + args.lang3.upper() + cmhStr + "</td>\n")
             fh.write("</tr>\n")
 
     fh.write("</table>\n")
