@@ -225,8 +225,9 @@ void TextureBaker<Renderer, ShaderGen>::bakeGraphOutput(OutputPtr output, GenCon
         return;
     }
 
+    // Set sRGB encoding in shader generation options for color outputs.
     bool encodeSrgb = _colorSpace == SRGB_TEXTURE && output->isColorType();
-    Renderer::getFramebuffer()->setEncodeSrgb(encodeSrgb);
+    context.getOptions().hwSrgbEncodeOutput = encodeSrgb;
 
     ShaderPtr shader = _generator->generate("BakingShader", output, context);
     Renderer::createProgram(shader);

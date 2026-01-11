@@ -36,7 +36,7 @@ SlangRendererPtr SlangRenderer::create(unsigned int width, unsigned int height, 
 SlangRenderer::SlangRenderer(unsigned int width, unsigned int height, Image::BaseType baseType) :
     ShaderRenderer(width, height, baseType),
     _initialized(false),
-    _screenColor(DEFAULT_SCREEN_COLOR_LIN_REC709)
+    _screenColor(DEFAULT_SCREEN_COLOR_SRGB)
 {
     _geometryHandler = GeometryHandler::create();
     _geometryHandler->addLoader(TinyObjLoader::create());

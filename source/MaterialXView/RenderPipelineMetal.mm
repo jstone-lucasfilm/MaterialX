@@ -467,10 +467,15 @@ void MetalRenderPipeline::renderFrame(void* color_texture, int shadowMapSize, co
     {
         [renderpassDesc.colorAttachments[0] setTexture:MTL(currentFramebuffer())->getColorTexture()];
     }
+    // Convert background color from sRGB to linear, since the linearToSRGB
+    // kernel will be applied to the entire framebuffer at the end of rendering.
+    mx::Color3 linearBackground = mx::Color3(_viewer->m_background[0],
+                                             _viewer->m_background[1],
+                                             _viewer->m_background[2]).srgbToLinear();
     [renderpassDesc.colorAttachments[0] setClearColor:MTLClearColorMake(
-                                        _viewer->m_background[0],
-                                        _viewer->m_background[1],
-                                        _viewer->m_background[2],
+                                        linearBackground[0],
+                                        linearBackground[1],
+                                        linearBackground[2],
                                         _viewer->m_background[3])];
     [renderpassDesc.colorAttachments[0] setLoadAction:MTLLoadActionClear];
     [renderpassDesc.colorAttachments[0] setStoreAction:MTLStoreActionStore];

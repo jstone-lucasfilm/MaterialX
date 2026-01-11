@@ -262,11 +262,16 @@ Viewer::Viewer(const std::string& materialFilename,
                                 ng::metal_command_queue());
 #else
     _renderPipeline = GLRenderPipeline::create(this);
-    
+
+    // Set sRGB encoding to be handled by the generated shader
+    // rather than the OpenGL framebuffer.
+    _genContext.getOptions().hwSrgbEncodeOutput = true;
+
     // Set Essl generator options
     _genContextEssl.getOptions().targetColorSpaceOverride = "lin_rec709";
     _genContextEssl.getOptions().fileTextureVerticalFlip = false;
     _genContextEssl.getOptions().hwMaxActiveLightSources = 1;
+    _genContextEssl.getOptions().hwSrgbEncodeOutput = true;
 #endif
 #if MATERIALX_BUILD_GEN_OSL
     // Set OSL generator options.
@@ -2255,9 +2260,6 @@ void Viewer::draw_contents()
         new ng::MessageDialog(this, ng::MessageDialog::Type::Warning,
             "Failed to render frame: ", e.what());
         _materialAssignments.clear();
-#ifndef MATERIALXVIEW_METAL_BACKEND
-        glDisable(GL_FRAMEBUFFER_SRGB);
-#endif
     }
 
     // Update frame timing.

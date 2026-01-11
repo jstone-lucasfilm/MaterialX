@@ -330,7 +330,6 @@ void GLRenderPipeline::renderFrame(void*, int shadowMapSize, const char* dirLigh
     glDepthFunc(GL_LEQUAL);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glDisable(GL_CULL_FACE);
-    glDisable(GL_FRAMEBUFFER_SRGB);
 
     // Update lighting state.
     lightHandler->setLightTransform(mx::Matrix44::createRotationY(lightRotation / 180.0f * PI));
@@ -353,8 +352,6 @@ void GLRenderPipeline::renderFrame(void*, int shadowMapSize, const char* dirLigh
             genContext.getOptions().hwShadowMap = false;
         }
     }
-
-    glEnable(GL_FRAMEBUFFER_SRGB);
 
     // Environment background
     if (_viewer->_drawEnvironment)
@@ -455,7 +452,6 @@ void GLRenderPipeline::renderFrame(void*, int shadowMapSize, const char* dirLigh
     {
         glDisable(GL_CULL_FACE);
     }
-    glDisable(GL_FRAMEBUFFER_SRGB);
 
     // Wireframe pass
     if (_viewer->_outlineSelection)

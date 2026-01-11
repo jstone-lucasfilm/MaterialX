@@ -204,6 +204,7 @@ bool SlangShaderRenderTester::runRenderer(const std::string& shaderName,
                 mx::GenOptions& contextOptions = context.getOptions();
                 contextOptions = options;
                 contextOptions.targetColorSpaceOverride = "lin_rec709";
+                contextOptions.hwSrgbEncodeOutput = true;
                 shader = shadergen.generate(shaderName, element, context);
                 generationTimer.endTimer();
             }

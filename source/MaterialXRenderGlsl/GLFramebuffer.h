@@ -43,19 +43,6 @@ class MX_RENDERGLSL_API GLFramebuffer
         return _height;
     }
 
-    /// Set the encode sRGB flag, which controls whether values written
-    /// to the framebuffer are encoded to the sRGB color space.
-    void setEncodeSrgb(bool encode)
-    {
-        _encodeSrgb = encode;
-    }
-
-    /// Return the encode sRGB flag.
-    bool getEncodeSrgb()
-    {
-        return _encodeSrgb;
-    }
-
     /// Bind the framebuffer for rendering.
     void bind();
 
@@ -90,7 +77,6 @@ class MX_RENDERGLSL_API GLFramebuffer
     unsigned int _height;
     unsigned int _channelCount;
     Image::BaseType _baseType;
-    bool _encodeSrgb;
 
     unsigned int _framebuffer;
     unsigned int _colorTexture;

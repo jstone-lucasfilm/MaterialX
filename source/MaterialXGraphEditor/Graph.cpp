@@ -104,15 +104,6 @@ std::string getUserNodeDefName(const std::string& val)
     return result;
 }
 
-static void EnableSRGBCallback(const ImDrawList*, const ImDrawCmd*)
-{
-    glEnable(GL_FRAMEBUFFER_SRGB);
-}
-static void DisableSRGBCallback(const ImDrawList*, const ImDrawCmd*)
-{
-    glDisable(GL_FRAMEBUFFER_SRGB);
-}
-
 } // anonymous namespace
 
 //
@@ -3351,17 +3342,11 @@ void Graph::graphButtons()
 
     if (_renderer)
     {
-        // Enable sRGB conversion for framebuffer ONLY when drawing material preview
-        ImGui::GetWindowDrawList()->AddCallback(EnableSRGBCallback,  nullptr);
-
         _renderer->getViewCamera()->setViewportSize(mx::Vector2(screenSize[0], screenSize[1]));
         GLuint64 my_image_texture = _renderer->_textureID;
         mx::Vector2 vec = _renderer->getViewCamera()->getViewportSize();
 
         ImGui::Image((ImTextureID) my_image_texture, screenSize, ImVec2(0, 1), ImVec2(1, 0));
-
-        // Disable sRGB conversion for all other imgui ui components.
-        ImGui::GetWindowDrawList()->AddCallback(DisableSRGBCallback,  nullptr);
     }
 
     ImGui::Separator();

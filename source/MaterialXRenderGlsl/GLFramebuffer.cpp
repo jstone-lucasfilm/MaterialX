@@ -27,7 +27,6 @@ GLFramebuffer::GLFramebuffer(unsigned int width, unsigned int height, unsigned i
     _height(height),
     _channelCount(channelCount),
     _baseType(baseType),
-    _encodeSrgb(false),
     _framebuffer(0),
     _colorTexture(0),
     _depthTexture(0)
@@ -37,9 +36,10 @@ GLFramebuffer::GLFramebuffer(unsigned int width, unsigned int height, unsigned i
         gladLoadGL();
     }
 
-    // Convert texture format to OpenGL.
+    // Convert texture format to OpenGL, using a linear format since
+    // sRGB encoding is handled by the shader via hwSrgbEncodeOutput.
     int glType, glFormat, glInternalFormat;
-    GLTextureHandler::mapTextureFormatToGL(baseType, channelCount, true, glType, glFormat, glInternalFormat);
+    GLTextureHandler::mapTextureFormatToGL(baseType, channelCount, false, glType, glFormat, glInternalFormat);
 
     // Create and bind framebuffer.
     glGenFramebuffers(1, &_framebuffer);
@@ -132,16 +132,6 @@ void GLFramebuffer::bind()
     glBindFramebuffer(GL_FRAMEBUFFER, _framebuffer);
     GLenum colorList[1] = { GL_COLOR_ATTACHMENT0 };
     glDrawBuffers(1, colorList);
-
-    if (_encodeSrgb)
-    {
-        glEnable(GL_FRAMEBUFFER_SRGB);
-    }
-    else
-    {
-        glDisable(GL_FRAMEBUFFER_SRGB);
-    }
-
     glViewport(0, 0, _width, _height);
 }
 

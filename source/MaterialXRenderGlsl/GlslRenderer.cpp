@@ -27,7 +27,7 @@ GlslRendererPtr GlslRenderer::create(unsigned int width, unsigned int height, Im
 GlslRenderer::GlslRenderer(unsigned int width, unsigned int height, Image::BaseType baseType) :
     ShaderRenderer(width, height, baseType, MatrixConvention::OpenGL),
     _initialized(false),
-    _screenColor(DEFAULT_SCREEN_COLOR_LIN_REC709)
+    _screenColor(DEFAULT_SCREEN_COLOR_SRGB)
 {
     _program = GlslProgram::create();
 
@@ -157,7 +157,6 @@ void GlslRenderer::render()
     glClearColor(_screenColor[0], _screenColor[1], _screenColor[2], 1.0f);
 
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_FRAMEBUFFER_SRGB);
     glDepthFunc(GL_LESS);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

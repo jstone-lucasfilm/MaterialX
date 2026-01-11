@@ -162,6 +162,9 @@ RenderView::RenderView(mx::DocumentPtr doc,
     // Make sure all uniforms are added so value updates can
     // find the corresponding uniform.
     _genContext.getOptions().shaderInterfaceType = mx::SHADER_INTERFACE_COMPLETE;
+    // Set sRGB encoding to be handled by the generated shader
+    // rather than the OpenGL framebuffer.
+    _genContext.getOptions().hwSrgbEncodeOutput = true;
 
     setDocument(doc);
     _stdLib = stdLib;
@@ -653,7 +656,6 @@ void RenderView::drawContents()
     catch (std::exception&)
     {
         _materialAssignments.clear();
-        glDisable(GL_FRAMEBUFFER_SRGB);
     }
 
     // Capture the current frame.
@@ -746,7 +748,6 @@ void RenderView::renderFrame()
     glDepthFunc(GL_LEQUAL);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glDisable(GL_CULL_FACE);
-    glDisable(GL_FRAMEBUFFER_SRGB);
 
     // Update lighting state.
     _lightHandler->setLightTransform(mx::Matrix44::createRotationY(_lightRotation / 180.0f * PI));
@@ -783,7 +784,6 @@ void RenderView::renderFrame()
     mx::Color3 screenColor(mx::DEFAULT_SCREEN_COLOR_SRGB);
     glClearColor(screenColor[0], screenColor[1], screenColor[2], 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    glEnable(GL_FRAMEBUFFER_SRGB);
 
     // Enable backface culling if requested.
     if (!_renderDoubleSided)
@@ -849,9 +849,9 @@ void RenderView::renderFrame()
     {
         glDisable(GL_CULL_FACE);
     }
-    // Restore framebuffer and disable sRGB conversion in preparation for ImGUI drawing
+
+    // Restore default framebuffer for ImGUI drawing.
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glDisable(GL_FRAMEBUFFER_SRGB);
 
     // Store viewport texture for render.
     _textureID = _renderFrame->getColorTexture();
