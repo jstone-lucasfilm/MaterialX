@@ -1,3 +1,4 @@
+// MSL-specific closure type definitions.
 // These are defined based on the HwShaderGenerator::ClosureContextType enum
 // if that changes - these need to be updated accordingly.
 
@@ -12,16 +13,16 @@
 
 struct ClosureData {
     int closureType;
-    vec3 L;
-    vec3 V;
-    vec3 N;
-    vec3 P;
+    float3 L;
+    float3 V;
+    float3 N;
+    float3 P;
     float occlusion;
 };
 
-ClosureData makeClosureData(int closureType, vec3 L, vec3 V, vec3 N, vec3 P, float occlusion)
+ClosureData makeClosureData(int closureType, float3 L, float3 V, float3 N, float3 P, float occlusion)
 {
-    return $closureDataConstructor;
+    return {closureType, L, V, N, P, occlusion};
 }
 
 #endif

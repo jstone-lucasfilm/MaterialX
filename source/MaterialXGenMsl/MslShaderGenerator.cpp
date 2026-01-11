@@ -961,6 +961,14 @@ void MslShaderGenerator::emitPixelStage(const ShaderGraph& graph, GenContext& co
 
         emitLightFunctionDefinitions(graph, context, stage);
 
+        // Include MSL-specific closure type definitions before BSDF functions.
+        // This ensures correct MSL syntax is used for ClosureData and makeClosureData.
+        if (graph.hasClassification(ShaderNode::Classification::CLOSURE) ||
+            graph.hasClassification(ShaderNode::Classification::SHADER))
+        {
+            emitLibraryInclude("pbrlib/genmsl/lib/mx_closure_type.metal", context, stage);
+        }
+
         // Emit function definitions for all nodes in the graph.
         emitFunctionDefinitions(graph, context, stage);
 
