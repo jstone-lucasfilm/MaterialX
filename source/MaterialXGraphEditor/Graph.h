@@ -7,6 +7,7 @@
 #define MATERIALX_GRAPH_H
 
 #include <MaterialXGraphEditor/FileDialog.h>
+#include <MaterialXGraphEditor/GraphTypes.h>
 #include <MaterialXGraphEditor/RenderView.h>
 #include <MaterialXGraphEditor/UiNode.h>
 
@@ -48,16 +49,6 @@ class MenuItem
     std::set<std::string> outputTypes;
 };
 
-// A link connects two pins and includes a unique id and the ids of the two pins it connects
-// Based on the Link struct from ImGui Node Editor blueprints-examples.cpp
-struct Link
-{
-    Link();
-
-    int _startAttr, _endAttr;
-    int _id;
-};
-
 class Graph
 {
   public:
@@ -96,7 +87,7 @@ class Graph
     void buildUiNodeGraph(const mx::NodeGraphPtr& nodeGraphs);
 
     // Based on the comment node in the ImGui Node Editor blueprints-example.cpp.
-    void buildGroupNode(UiNodePtr node);
+    void buildBackdropNode(UiNodePtr node);
 
     // Connect links via connected nodes in UiNodePtr
     void linkGraph();

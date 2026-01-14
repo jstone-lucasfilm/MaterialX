@@ -119,14 +119,6 @@ static void DisableSRGBCallback(const ImDrawList*, const ImDrawCmd*)
 // Link methods
 //
 
-Link::Link() :
-    _startAttr(-1),
-    _endAttr(-1)
-{
-    static int nextId = 1;
-    _id = nextId++;
-}
-
 //
 // Graph methods
 //
@@ -301,16 +293,16 @@ void Graph::addExtraNodes()
     for (const std::string& type : types)
     {
         std::string nodeName = "ND_input_" + type;
-        _nodesToAdd.emplace_back(nodeName, type, "input", "Input Nodes", emptySet, emptySet);
+        _nodesToAdd.emplace_back(nodeName, type, mx::Input::CATEGORY, GROUP_INPUT_NODES, emptySet, emptySet);
         nodeName = "ND_output_" + type;
-        _nodesToAdd.emplace_back(nodeName, type, "output", "Output Nodes", emptySet, emptySet);
+        _nodesToAdd.emplace_back(nodeName, type, mx::Output::CATEGORY, GROUP_OUTPUT_NODES, emptySet, emptySet);
     }
 
-    // Add group node
-    _nodesToAdd.emplace_back("ND_group", "", "group", "Group Nodes", emptySet, emptySet);
+    // Add backdrop node
+    _nodesToAdd.emplace_back(NODEDEF_BACKDROP, "", mx::Backdrop::CATEGORY, GROUP_BACKDROPS, emptySet, emptySet);
 
     // Add nodegraph node
-    _nodesToAdd.emplace_back("ND_nodegraph", "", "nodegraph", "Node Graph", emptySet, emptySet);
+    _nodesToAdd.emplace_back(NODEDEF_NODEGRAPH, "", mx::NodeGraph::CATEGORY, GROUP_NODEGRAPH, emptySet, emptySet);
 }
 
 ed::PinId Graph::getOutputPin(UiNodePtr node, UiNodePtr upNode, UiPinPtr input)
@@ -556,7 +548,7 @@ ImVec2 Graph::layoutPosition(UiNodePtr layoutNode, ImVec2 startingPos, bool init
             }
             else
             {
-                // Don't set position of group nodes
+                // Don't set position of backdrop nodes
                 if (node->getMessage().empty())
                 {
                     mx::ElementPtr elem = node->getElement();
@@ -706,38 +698,7 @@ void Graph::layoutInputs()
 
 void Graph::setPinColor()
 {
-    _pinColor.emplace("integer", ImColor(255, 255, 28, 255));
-    _pinColor.emplace("boolean", ImColor(255, 0, 255, 255));
-    _pinColor.emplace("float", ImColor(50, 100, 255, 255));
-    _pinColor.emplace("color3", ImColor(178, 34, 34, 255));
-    _pinColor.emplace("color4", ImColor(50, 10, 255, 255));
-    _pinColor.emplace("vector2", ImColor(100, 255, 100, 255));
-    _pinColor.emplace("vector3", ImColor(0, 255, 0, 255));
-    _pinColor.emplace("vector4", ImColor(100, 0, 100, 255));
-    _pinColor.emplace("matrix33", ImColor(0, 100, 100, 255));
-    _pinColor.emplace("matrix44", ImColor(50, 255, 100, 255));
-    _pinColor.emplace("filename", ImColor(255, 184, 28, 255));
-    _pinColor.emplace("string", ImColor(100, 100, 50, 255));
-    _pinColor.emplace("geomname", ImColor(121, 60, 180, 255));
-    _pinColor.emplace("BSDF", ImColor(10, 181, 150, 255));
-    _pinColor.emplace("EDF", ImColor(255, 50, 100, 255));
-    _pinColor.emplace("VDF", ImColor(0, 100, 151, 255));
-    _pinColor.emplace(mx::SURFACE_SHADER_TYPE_STRING, ImColor(150, 255, 255, 255));
-    _pinColor.emplace(mx::MATERIAL_TYPE_STRING, ImColor(255, 255, 255, 255));
-    _pinColor.emplace(mx::DISPLACEMENT_SHADER_TYPE_STRING, ImColor(155, 50, 100, 255));
-    _pinColor.emplace(mx::VOLUME_SHADER_TYPE_STRING, ImColor(155, 250, 100, 255));
-    _pinColor.emplace(mx::LIGHT_SHADER_TYPE_STRING, ImColor(100, 150, 100, 255));
-    _pinColor.emplace("none", ImColor(140, 70, 70, 255));
-    _pinColor.emplace(mx::MULTI_OUTPUT_TYPE_STRING, ImColor(70, 70, 70, 255));
-    _pinColor.emplace("integerarray", ImColor(200, 10, 100, 255));
-    _pinColor.emplace("floatarray", ImColor(25, 250, 100));
-    _pinColor.emplace("color3array", ImColor(25, 200, 110));
-    _pinColor.emplace("color4array", ImColor(50, 240, 110));
-    _pinColor.emplace("vector2array", ImColor(50, 200, 75));
-    _pinColor.emplace("vector3array", ImColor(20, 200, 100));
-    _pinColor.emplace("vector4array", ImColor(100, 200, 100));
-    _pinColor.emplace("geomnamearray", ImColor(150, 200, 100));
-    _pinColor.emplace("stringarray", ImColor(120, 180, 100));
+    _pinColor = createPinColorMap();
 }
 
 void Graph::setRenderMaterial(UiNodePtr node)
@@ -1379,7 +1340,7 @@ void Graph::buildUiBaseGraph(mx::DocumentPtr doc)
         std::string name = nodeGraph->getName();
         auto currNode = std::make_shared<UiNode>(name, _graphTotalSize);
         currNode->setNodeGraph(nodeGraph);
-        setUiNodeInfo(currNode, "", "nodegraph");
+        setUiNodeInfo(currNode, "", mx::NodeGraph::CATEGORY);
     }
     for (mx::InputPtr input : inputNodes)
     {
@@ -1409,13 +1370,13 @@ void Graph::buildUiBaseGraph(mx::DocumentPtr doc)
             mx::NodePtr connectedNode = input->getConnectedNode();
             if (!nodeGraphName.empty())
             {
-                downNum = findNode(graph->getName(), "nodegraph");
-                upNum = findNode(nodeGraphName, "nodegraph");
+                downNum = findNode(graph->getName(), mx::NodeGraph::CATEGORY);
+                upNum = findNode(nodeGraphName, mx::NodeGraph::CATEGORY);
             }
             else if (connectedNode)
             {
-                downNum = findNode(graph->getName(), "nodegraph");
-                upNum = findNode(connectedNode->getName(), "node");
+                downNum = findNode(graph->getName(), mx::NodeGraph::CATEGORY);
+                upNum = findNode(connectedNode->getName(), mx::Node::CATEGORY);
             }
 
             if (upNum > -1)
@@ -1447,23 +1408,23 @@ void Graph::buildUiBaseGraph(mx::DocumentPtr doc)
             if (!nodeGraphName.empty())
             {
 
-                upNum = findNode(nodeGraphName, "nodegraph");
-                downNum = findNode(node->getName(), "node");
+                upNum = findNode(nodeGraphName, mx::NodeGraph::CATEGORY);
+                downNum = findNode(node->getName(), mx::Node::CATEGORY);
             }
             else if (connectedNode)
             {
-                upNum = findNode(connectedNode->getName(), "node");
-                downNum = findNode(node->getName(), "node");
+                upNum = findNode(connectedNode->getName(), mx::Node::CATEGORY);
+                downNum = findNode(node->getName(), mx::Node::CATEGORY);
             }
             else if (connectedOutput)
             {
-                upNum = findNode(connectedOutput->getName(), "output");
-                downNum = findNode(node->getName(), "node");
+                upNum = findNode(connectedOutput->getName(), mx::Output::CATEGORY);
+                downNum = findNode(node->getName(), mx::Node::CATEGORY);
             }
             else if (!input->getInterfaceName().empty())
             {
-                upNum = findNode(input->getInterfaceName(), "input");
-                downNum = findNode(node->getName(), "node");
+                upNum = findNode(input->getInterfaceName(), mx::Input::CATEGORY);
+                downNum = findNode(node->getName(), mx::Node::CATEGORY);
             }
             if (upNum != -1)
             {
@@ -1558,27 +1519,27 @@ void Graph::buildUiNodeGraph(const mx::NodeGraphPtr& nodeGraphs)
                     std::string downstreamType;
                     if (upstreamNode)
                     {
-                        upstreamType = "node";
+                        upstreamType = mx::Node::CATEGORY;
                     }
                     else if (upstreamInput)
                     {
-                        upstreamType = "input";
+                        upstreamType = mx::Input::CATEGORY;
                     }
                     else if (upstreamOutput)
                     {
-                        upstreamType = "output";
+                        upstreamType = mx::Output::CATEGORY;
                     }
                     if (downstreamNode)
                     {
-                        downstreamType = "node";
+                        downstreamType = mx::Node::CATEGORY;
                     }
                     else if (downstreamInput)
                     {
-                        downstreamType = "input";
+                        downstreamType = mx::Input::CATEGORY;
                     }
                     else if (downstreamOutput)
                     {
-                        downstreamType = "output";
+                        downstreamType = mx::Output::CATEGORY;
                     }
                     int upNode = findNode(upName, upstreamType);
                     int downNode = findNode(downName, downstreamType);
@@ -1623,7 +1584,7 @@ void Graph::buildUiNodeGraph(const mx::NodeGraphPtr& nodeGraphs)
                             if (input->hasInterfaceName())
                             {
                                 std::string interfaceName = input->getInterfaceName();
-                                int newUp = findNode(interfaceName, "input");
+                                int newUp = findNode(interfaceName, mx::Input::CATEGORY);
                                 if (newUp >= 0)
                                 {
                                     mx::InputPtr inputP = std::make_shared<mx::Input>(downstreamElem, input->getName());
@@ -1659,8 +1620,8 @@ void Graph::buildUiNodeGraph(const mx::NodeGraphPtr& nodeGraphs)
                     mx::NodePtr upNode = input->getConnectedNode();
                     if (upNode)
                     {
-                        int upNum = findNode(upNode->getName(), "node");
-                        int downNode = findNode(node->getName(), "node");
+                        int upNum = findNode(upNode->getName(), mx::Node::CATEGORY);
+                        int downNode = findNode(node->getName(), mx::Node::CATEGORY);
                         if ((upNum >= 0) && (downNode >= 0))
                         {
 
@@ -1676,8 +1637,8 @@ void Graph::buildUiNodeGraph(const mx::NodeGraphPtr& nodeGraphs)
                     }
                     else if (input->getInterfaceInput())
                     {
-                        int upNum = findNode(input->getInterfaceInput()->getName(), "input");
-                        int downNode = findNode(node->getName(), "node");
+                        int upNum = findNode(input->getInterfaceInput()->getName(), mx::Input::CATEGORY);
+                        int downNode = findNode(node->getName(), mx::Node::CATEGORY);
                         if ((upNum >= 0) && (downNode >= 0))
                         {
 
@@ -1698,8 +1659,8 @@ void Graph::buildUiNodeGraph(const mx::NodeGraphPtr& nodeGraphs)
                 mx::NodePtr upNode = output->getConnectedNode();
                 if (upNode)
                 {
-                    int upNum = findNode(upNode->getName(), "node");
-                    int downNode = findNode(output->getName(), "output");
+                    int upNum = findNode(upNode->getName(), mx::Node::CATEGORY);
+                    int downNode = findNode(output->getName(), mx::Output::CATEGORY);
                     UiEdge newEdge = UiEdge(_graphNodes[upNum], _graphNodes[downNode], nullptr);
                     if (!edgeExists(newEdge))
                     {
@@ -1721,19 +1682,19 @@ int Graph::findNode(const std::string& name, const std::string& type)
     {
         if (_graphNodes[i]->getName() == name)
         {
-            if (type == "node" && _graphNodes[i]->getNode() != nullptr)
+            if (type == mx::Node::CATEGORY && _graphNodes[i]->getNode() != nullptr)
             {
                 return count;
             }
-            else if (type == "input" && _graphNodes[i]->getInput() != nullptr)
+            else if (type == mx::Input::CATEGORY && _graphNodes[i]->getInput() != nullptr)
             {
                 return count;
             }
-            else if (type == "output" && _graphNodes[i]->getOutput() != nullptr)
+            else if (type == mx::Output::CATEGORY && _graphNodes[i]->getOutput() != nullptr)
             {
                 return count;
             }
-            else if (type == "nodegraph" && _graphNodes[i]->getNodeGraph() != nullptr)
+            else if (type == mx::NodeGraph::CATEGORY && _graphNodes[i]->getNodeGraph() != nullptr)
             {
                 return count;
             }
@@ -1957,7 +1918,7 @@ void Graph::addNode(const std::string& category, const std::string& name, const 
     std::vector<mx::NodeDefPtr> matchingNodeDefs;
 
     // Create document or node graph is there is not already one
-    if (category == "output")
+    if (category == mx::Output::CATEGORY)
     {
         std::string outName = "";
         mx::OutputPtr newOut;
@@ -1969,7 +1930,7 @@ void Graph::addNode(const std::string& category, const std::string& name, const 
         setUiNodeInfo(outputNode, type, category);
         return;
     }
-    if (category == "input")
+    if (category == mx::Input::CATEGORY)
     {
         std::string inName = "";
         mx::InputPtr newIn = nullptr;
@@ -1983,19 +1944,19 @@ void Graph::addNode(const std::string& category, const std::string& name, const 
         setUiNodeInfo(inputNode, type, category);
         return;
     }
-    else if (category == "group")
+    else if (category == mx::Backdrop::CATEGORY)
     {
-        auto groupNode = std::make_shared<UiNode>(name, int(++_graphTotalSize));
+        auto backdropNode = std::make_shared<UiNode>(name, int(++_graphTotalSize));
 
-        // Set message of group UiNode in order to identify it as such
-        groupNode->setMessage("Comment");
-        setUiNodeInfo(groupNode, type, "group");
+        // Set message of backdrop UiNode in order to identify it as such
+        backdropNode->setMessage("Backdrop");
+        setUiNodeInfo(backdropNode, type, mx::Backdrop::CATEGORY);
 
-        // Create ui portions of group node
-        buildGroupNode(_graphNodes.back());
+        // Create UI portions of backdrop node
+        buildBackdropNode(_graphNodes.back());
         return;
     }
-    else if (category == "nodegraph")
+    else if (category == mx::NodeGraph::CATEGORY)
     {
         // Create new mx::NodeGraph and set as current node graph
         _graphDoc->addNodeGraph();
@@ -2005,7 +1966,7 @@ void Graph::addNode(const std::string& category, const std::string& name, const 
         // Set mx::Nodegraph as node graph for uiNode
         nodeGraphNode->setNodeGraph(_graphDoc->getNodeGraphs().back());
 
-        setUiNodeInfo(nodeGraphNode, type, "nodegraph");
+        setUiNodeInfo(nodeGraphNode, type, mx::NodeGraph::CATEGORY);
         return;
     }
     else
@@ -2109,7 +2070,7 @@ UiPinPtr Graph::getPin(ed::PinId pinId)
 void Graph::drawPinIcon(const std::string& type, bool connected, int alpha)
 {
     ax::Drawing::IconType iconType = ax::Drawing::IconType::Flow;
-    ImColor color = ImColor(0, 0, 0, 255);
+    ImColor color = DEFAULT_PIN_COLOR;
     if (_pinColor.find(type) != _pinColor.end())
     {
         color = _pinColor[type];
@@ -2120,7 +2081,7 @@ void Graph::drawPinIcon(const std::string& type, bool connected, int alpha)
     ax::Widgets::Icon(ImVec2(24, 24), iconType, connected, color, ImColor(32, 32, 32, alpha));
 }
 
-void Graph::buildGroupNode(UiNodePtr node)
+void Graph::buildBackdropNode(UiNodePtr node)
 {
     const float commentAlpha = 0.75f;
 
@@ -2249,9 +2210,9 @@ std::vector<int> Graph::createNodes(bool nodegraph)
 
     for (UiNodePtr node : _graphNodes)
     {
-        if (node->getCategory() == "group")
+        if (node->getCategory() == mx::Backdrop::CATEGORY)
         {
-            buildGroupNode(node);
+            buildBackdropNode(node);
         }
         else
         {
@@ -3596,11 +3557,11 @@ void Graph::propertyEditor()
                 _currUiNode->setName(name);
             }
         }
-        else if (_currUiNode->getCategory() == "group")
+        else if (_currUiNode->getCategory() == mx::Backdrop::CATEGORY)
         {
             _currUiNode->setName(temp);
         }
-        else if (_currUiNode->getCategory() == "nodegraph")
+        else if (_currUiNode->getCategory() == mx::NodeGraph::CATEGORY)
         {
             if (temp != original)
             {
