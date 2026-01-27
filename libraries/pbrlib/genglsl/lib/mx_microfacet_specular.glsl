@@ -97,7 +97,7 @@ vec3 mx_ggx_dir_albedo_analytic(float NdotV, float alpha, vec3 F0, vec3 F90)
              vec4(-26.44, 1.436, -36.11, 54.9) * x2 * y +
              vec4(19.99, 0.2913, 15.86, 300.2) * x * y2 +
              vec4(-5.448, 0.6286, 33.37, -285.1) * x2 * y2;
-    vec2 AB = clamp(r.xy / r.zw, 0.0, 1.0);
+    vec2 AB = max(r.xy / r.zw, 0.0);
     return F0 * AB.x + F90 * AB.y;
 }
 

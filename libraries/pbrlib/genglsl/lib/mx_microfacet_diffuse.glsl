@@ -79,7 +79,7 @@ float mx_oren_nayar_diffuse_dir_albedo(float NdotV, float roughness)
 #else
     float dirAlbedo = mx_oren_nayar_diffuse_dir_albedo_analytic(NdotV, roughness);
 #endif
-    return clamp(dirAlbedo, 0.0, 1.0);
+    return max(dirAlbedo, 0.0);
 }
 
 // Improved Oren-Nayar diffuse from Fujii:

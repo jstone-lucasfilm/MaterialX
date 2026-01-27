@@ -53,7 +53,7 @@ float mx_imageworks_sheen_dir_albedo_monte_carlo(float NdotV, float roughness)
     vec3 V = vec3(sqrt(1.0f - mx_square(NdotV)), 0, NdotV);
 
     float radiance = 0.0;
-    const int SAMPLE_COUNT = 64;
+    const int SAMPLE_COUNT = 1024;
     for (int i = 0; i < SAMPLE_COUNT; i++)
     {
         vec2 Xi = mx_spherical_fibonacci(i, SAMPLE_COUNT);
@@ -88,7 +88,7 @@ float mx_imageworks_sheen_dir_albedo(float NdotV, float roughness)
 #else
     float dirAlbedo = mx_imageworks_sheen_dir_albedo_monte_carlo(NdotV, roughness);
 #endif
-    return clamp(dirAlbedo, 0.0, 1.0);
+    return max(dirAlbedo, 0.0);
 }
 
 // The following functions are adapted from https://github.com/tizian/ltc-sheen.
