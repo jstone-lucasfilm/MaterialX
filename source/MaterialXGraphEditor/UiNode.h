@@ -259,17 +259,13 @@ class UiNode
     std::vector<UiEdge>& getEdges() { return _edges; }
     const std::vector<UiEdge>& getEdges() const { return _edges; }
 
-    // Layout/display accessors
-    int getLevel() const { return _level; }
-    void setLevel(int level) { _level = level; }
+    // Display accessors
     bool getShowAllInputs() const { return _showAllInputs; }
     void setShowAllInputs(bool show) { _showAllInputs = show; }
     bool getShowOutputsInEditor() const { return _showOutputsInEditor; }
     void setShowOutputsInEditor(bool show) { _showOutputsInEditor = show; }
 
     UiNodePtr getConnectedNode(const std::string& name);
-    float getAverageY();
-    float getMinX();
     int getEdgeIndex(int id, UiPinPtr pin);
     bool eraseEdge(int id, UiPinPtr pin);
     void removeOutputConnection(const std::string& name);
@@ -289,7 +285,6 @@ class UiNode
     std::vector<UiPinPtr> _outputPins;
     std::vector<UiEdge> _edges;
 
-    int _level;
     bool _showAllInputs;
     bool _showOutputsInEditor;
 };

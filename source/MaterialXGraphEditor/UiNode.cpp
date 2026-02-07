@@ -62,7 +62,6 @@ UiNode::UiNode() :
     _id(0),
     _nodePos(INVALID_POS, INVALID_POS),
     _inputNodeNum(0),
-    _level(-1),
     _showAllInputs(false),
     _showOutputsInEditor(true)
 {
@@ -73,7 +72,6 @@ UiNode::UiNode(const std::string& name, int id) :
     _nodePos(INVALID_POS, INVALID_POS),
     _name(name),
     _inputNodeNum(0),
-    _level(-1),
     _showAllInputs(false),
     _showOutputsInEditor(true)
 {
@@ -121,40 +119,6 @@ UiNodePtr UiNode::getConnectedNode(const std::string& name)
         }
     }
     return nullptr;
-}
-
-float UiNode::getAverageY()
-{
-    float small = 10000000.f;
-    for (UiNodePtr node : _outputConnections)
-    {
-        ImVec2 pos = node->getPos();
-        if (pos.y != INVALID_POS)
-        {
-            if (pos.y < small)
-            {
-                small = pos.x;
-            }
-        }
-    }
-    return small;
-}
-
-float UiNode::getMinX()
-{
-    float small = 10000000.f;
-    for (UiNodePtr node : _outputConnections)
-    {
-        ImVec2 pos = node->getPos();
-        if (pos.x != INVALID_POS)
-        {
-            if (pos.x < small)
-            {
-                small = pos.x;
-            }
-        }
-    }
-    return small;
 }
 
 int UiNode::getEdgeIndex(int id, UiPinPtr pin)

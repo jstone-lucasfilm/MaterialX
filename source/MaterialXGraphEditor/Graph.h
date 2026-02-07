@@ -7,10 +7,9 @@
 #define MATERIALX_GRAPH_H
 
 #include <MaterialXGraphEditor/FileDialog.h>
+#include <MaterialXGraphEditor/Layout.h>
 #include <MaterialXGraphEditor/RenderView.h>
 #include <MaterialXGraphEditor/UiNode.h>
-
-#include <imgui_node_editor.h>
 
 namespace ed = ax::NodeEditor;
 namespace mx = MaterialX;
@@ -78,9 +77,6 @@ struct GraphState
     // Links and edges representing connections within this graph.
     std::vector<Link> links;
     std::vector<UiEdge> edges;
-
-    // Map from layout level to nodes at that level, used for auto-layout.
-    std::unordered_map<int, std::vector<UiNodePtr>> levelMap;
 
     // Counter for generating unique UI element IDs.
     int nextUiId = 1;
@@ -153,17 +149,6 @@ class Graph
 
     void deleteLinkInfo(int startAtrr, int endAttr);
 
-    // Layout the x-position by assigning the node levels based on its distance from the first node
-    ImVec2 layoutPosition(UiNodePtr node, ImVec2 pos, bool initialLayout, int level);
-
-    // Extra layout pass for inputs and nodes that do not attach to an output node
-    void layoutInputs();
-
-    void findYSpacing(float startPos);
-    float totalHeight(int level);
-    void setYSpacing(int level, float startingPos);
-    float findAvgY(const std::vector<UiNodePtr>& nodes);
-
     // Return pin color based on the type of the value of that pin
     void setPinColor();
 
@@ -216,9 +201,6 @@ class Graph
 
     // Restore node positions from MaterialX element attributes.
     void restorePositions();
-
-    // Check if node has already been assigned a position
-    bool checkPosition(UiNodePtr node);
 
     // Add an input to a node based on its NodeDef input definition.
     mx::InputPtr addNodeInput(UiNodePtr node, mx::InputPtr nodeDefInput);
@@ -337,8 +319,8 @@ class Graph
     bool _addNewNode;
     bool _ctrlClick;
     bool _isCut;
-    // auto layout button clicked
-    bool _autoLayout;
+    // Layout engine for automatic node positioning.
+    Layout _layout;
 
     // used when updating materials
     int _frameCount;
