@@ -156,9 +156,8 @@ Graph::Graph(const std::string& materialFilename,
     _geomFilter.push_back(".glb");
     _geomFilter.push_back(".gltf");
 
-    _graphDoc = loadDocument(materialFilename);
     createNodeUIList(_stdLib);
-    initializeGraph();
+    initializeGraph(loadDocument(materialFilename));
 
     // Create a renderer using the initial startup document.
     mx::FilePath captureFilename = "resources/Materials/Examples/example.png";
@@ -2871,15 +2870,9 @@ void Graph::upNodeGraph()
     }
 }
 
-void Graph::clearGraph()
+void Graph::initializeGraph(mx::DocumentPtr doc)
 {
-    _graphDoc = mx::createDocument();
-    _graphDoc->setDataLibrary(_stdLib);
-
-    _state = GraphState();
-    _state.graphElem = _graphDoc;
-    _parentStates.clear();
-
+    // Clear the existing graph.
     if (_currUiNode != nullptr)
     {
         ed::DeselectNode(_currUiNode->getId());
@@ -2887,50 +2880,45 @@ void Graph::clearGraph()
     }
     _prevUiNode = nullptr;
     _currRenderNode = nullptr;
+    _parentStates.clear();
 
-    _renderer->setDocument(_graphDoc);
-    _renderer->updateMaterials(nullptr);
-}
+    // Initialize the new graph from the given document.
+    if (!doc)
+    {
+        doc = mx::createDocument();
+        doc->setDataLibrary(_stdLib);
+    }
+    _graphDoc = doc;
 
-void Graph::initializeGraph()
-{
     _needsLayout = true;
     _needsNavigation = true;
     _state = GraphState();
     buildUiBaseGraph(_graphDoc);
     _state.graphElem = _graphDoc;
-    _state.isCompoundNodeGraph = false;
-    _prevUiNode = nullptr;
-    _currUiNode = nullptr;
-    _currRenderNode = nullptr;
 
     // Set the display name from the current material filename.
     mx::FilePath materialPath(_materialFilename);
     materialPath.removeExtension();
     _state.name = materialPath.getBaseName();
-}
 
-void Graph::loadGraphFromFile(bool prompt)
-{
-    // Deselect node before loading new file
-    if (_currUiNode)
+    if (_renderer)
     {
-        ed::DeselectNode(_currUiNode->getId());
-        _currUiNode = nullptr;
-    }
-
-    if (prompt || _materialFilename.isEmpty())
-    {
-        _fileDialog.setTitle("Open File");
-        _fileDialog.setTypeFilters(_mtlxFilter);
-        _fileDialog.open();
-    }
-    else
-    {
-        _graphDoc = loadDocument(_materialFilename);
-        initializeGraph();
         _renderer->setDocument(_graphDoc);
         _renderer->updateMaterials(nullptr);
+    }
+}
+
+void Graph::loadGraphFromFile(const mx::FilePath& filename)
+{
+    initializeGraph(loadDocument(filename));
+    _materialFilename = filename;
+}
+
+void Graph::reloadGraph()
+{
+    if (!_materialFilename.isEmpty())
+    {
+        loadGraphFromFile(_materialFilename);
     }
 }
 
@@ -2941,7 +2929,14 @@ void Graph::saveGraphToFile()
     _fileDialogSave.open();
 }
 
-void Graph::loadGeometry()
+void Graph::openMaterialDialog()
+{
+    _fileDialog.setTitle("Open File");
+    _fileDialog.setTypeFilters(_mtlxFilter);
+    _fileDialog.open();
+}
+
+void Graph::openGeometryDialog()
 {
     _fileDialogGeom.setTitle("Load Geometry");
     _fileDialogGeom.setTypeFilters(_geomFilter);
@@ -2960,15 +2955,15 @@ void Graph::graphButtons()
             // Buttons for loading and saving a .mtlx
             if (ImGui::MenuItem("New", "Ctrl-N"))
             {
-                clearGraph();
+                initializeGraph();
             }
             else if (ImGui::MenuItem("Open", "Ctrl-O"))
             {
-                loadGraphFromFile(true);
+                openMaterialDialog();
             }
             else if (ImGui::MenuItem("Reload", "Ctrl-R"))
             {
-                loadGraphFromFile(false);
+                reloadGraph();
             }
             else if (ImGui::MenuItem("Save", "Ctrl-S"))
             {
@@ -3008,7 +3003,7 @@ void Graph::graphButtons()
         {
             if (ImGui::MenuItem("Load Geometry"))
             {
-                loadGeometry();
+                openGeometryDialog();
             }
             ImGui::EndMenu();
         }
@@ -3038,15 +3033,15 @@ void Graph::graphButtons()
     {
         if (ImGui::IsKeyReleased(ImGuiKey_O))
         {
-            loadGraphFromFile(true);
+            openMaterialDialog();
         }
         else if (ImGui::IsKeyReleased(ImGuiKey_N))
         {
-            clearGraph();
+            initializeGraph();
         }
         else if (ImGui::IsKeyReleased(ImGuiKey_R))
         {
-            loadGraphFromFile(false);
+            reloadGraph();
         }
         else if (ImGui::IsKeyReleased(ImGuiKey_S))
         {
@@ -4565,12 +4560,8 @@ void Graph::drawGraph(ImVec2 mousePos)
     // Create and load document from selected file
     if (_fileDialog.hasSelected())
     {
-        _materialFilename = _fileDialog.getSelected();
+        loadGraphFromFile(_fileDialog.getSelected());
         _fileDialog.clearSelected();
-        _graphDoc = loadDocument(_materialFilename);
-        initializeGraph();
-        _renderer->setDocument(_graphDoc);
-        _renderer->updateMaterials(nullptr);
     }
 
     _fileDialogGeom.display();

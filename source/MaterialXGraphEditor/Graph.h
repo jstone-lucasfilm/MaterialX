@@ -262,13 +262,24 @@ class Graph
     // Set the node to display in render view based on selected node or nodegraph
     void setRenderMaterial(UiNodePtr node);
 
-    void clearGraph();
-    void loadGraphFromFile(bool prompt);
-    void saveGraphToFile();
-    void loadGeometry();
+    // Initialize the graph from a document, or create an empty graph
+    // if no document is provided.
+    void initializeGraph(mx::DocumentPtr doc = nullptr);
 
-    // Initialize the graph state from the current document.
-    void initializeGraph();
+    // Load a graph from the given file.
+    void loadGraphFromFile(const mx::FilePath& filename);
+
+    // Reload the current graph from its source file.
+    void reloadGraph();
+
+    // Save the current graph via a file dialog.
+    void saveGraphToFile();
+
+    // Open a file dialog to select a material document.
+    void openMaterialDialog();
+
+    // Open a file dialog to select a geometry file.
+    void openGeometryDialog();
 
     void showHelp() const;
 
