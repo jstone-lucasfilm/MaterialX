@@ -3307,22 +3307,34 @@ void Graph::propertyEditor()
                 std::string name = _currUiNode->getNode()->getParent()->createValidChildName(temp);
 
                 std::vector<UiNodePtr> downstreamNodes = _currUiNode->getOutputConnections();
+                _currUiNode->getNode()->setName(name);
                 for (UiNodePtr uiNode : downstreamNodes)
                 {
-                    if (!uiNode->getInput() && uiNode->getNode())
+                    mx::InterfaceElementPtr interface = nullptr;
+                    if (uiNode->getNode())
+                        interface = uiNode->getNode();
+                    else if (uiNode->getNodeGraph())
+                        interface = uiNode->getNodeGraph();
+
+                    if (interface)
                     {
-                        for (mx::InputPtr input : uiNode->getNode()->getActiveInputs())
+                        for (mx::InputPtr input : interface->getActiveInputs())
                         {
                             if (input->getConnectedNode() == _currUiNode->getNode())
                             {
-                                _currUiNode->getNode()->setName(name);
-                                uiNode->getNode()->setConnectedNode(input->getName(), _currUiNode->getNode());
+                                input->setConnectedNode(_currUiNode->getNode());
                             }
+                        }
+                    }
+                    else if (uiNode->getOutput())
+                    {
+                        if (uiNode->getOutput()->getConnectedNode() == _currUiNode->getNode())
+                        {
+                            uiNode->getOutput()->setConnectedNode(_currUiNode->getNode());
                         }
                     }
                 }
                 _currUiNode->setName(name);
-                _currUiNode->getNode()->setName(name);
             }
         }
         else if (_currUiNode->getInput())
@@ -3330,32 +3342,41 @@ void Graph::propertyEditor()
             if (temp != original)
             {
                 std::string name = _currUiNode->getInput()->getParent()->createValidChildName(temp);
+                _currUiNode->getInput()->setName(name);
+
                 std::vector<UiNodePtr> downstreamNodes = _currUiNode->getOutputConnections();
                 for (UiNodePtr uiNode : downstreamNodes)
                 {
-                    if (uiNode->getInput() == nullptr)
+                    if (uiNode->getInput())
                     {
-                        if (uiNode->getNode())
+                        continue;
+                    }
+
+                    mx::InterfaceElementPtr interface = nullptr;
+                    if (uiNode->getNode())
+                        interface = uiNode->getNode();
+                    else if (uiNode->getNodeGraph())
+                        interface = uiNode->getNodeGraph();
+
+                    if (interface)
+                    {
+                        for (mx::InputPtr input : interface->getActiveInputs())
                         {
-                            for (mx::InputPtr input : uiNode->getNode()->getActiveInputs())
+                            if (input->getInterfaceName() == original)
                             {
-                                if (input->getInterfaceInput() == _currUiNode->getInput())
-                                {
-                                    _currUiNode->getInput()->setName(name);
-                                    mx::ValuePtr val = _currUiNode->getInput()->getValue();
-                                    input->setConnectedInterfaceName(name);
-                                    mx::InputPtr pt = input->getInterfaceInput();
-                                }
+                                input->setInterfaceName(name);
                             }
                         }
-                        else
+                    }
+                    else if (uiNode->getOutput())
+                    {
+                        if (uiNode->getOutput()->getInterfaceName() == original)
                         {
-                            uiNode->getOutput()->setConnectedNode(_currUiNode->getNode());
+                            uiNode->getOutput()->setInterfaceName(name);
                         }
                     }
                 }
 
-                _currUiNode->getInput()->setName(name);
                 _currUiNode->setName(name);
             }
         }
