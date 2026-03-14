@@ -154,7 +154,7 @@ int mx_bjfinal(int mxp_a, int mxp_b, int mxp_c)
 }
 
 // Convert a 32 bit integer into a floating point number in [0,1]
-float mx_bits_to_01(int mxp_bits)
+export float mx_bits_to_01(int mxp_bits)
 {
   return mxp_bits >=0 ? float(mxp_bits) / 4294967295.:
             float(mxp_bits>>>1)/ 2147483647.;
@@ -165,14 +165,14 @@ float mx_fade(float mxp_t)
    return mxp_t * mxp_t * mxp_t * (mxp_t * (mxp_t * 6.0 - 15.0) + 10.0);
 }
 
-int mx_hash_int(int mxp_x)
+export int mx_hash_int(int mxp_x)
 {
     int len = 1;
     int seed = int(0xdeadbeef) + (len << 2) + 13;
     return mx_bjfinal(seed + mxp_x, seed, seed);
 }
 
-int mx_hash_int(int mxp_x, int mxp_y)
+export int mx_hash_int(int mxp_x, int mxp_y)
 {
     int len = 2;
     int a, b, c;
@@ -182,7 +182,7 @@ int mx_hash_int(int mxp_x, int mxp_y)
     return mx_bjfinal(a, b, c);
 }
 
-int mx_hash_int(int mxp_x, int mxp_y, int mxp_z)
+export int mx_hash_int(int mxp_x, int mxp_y, int mxp_z)
 {
     int len = 3;
     int a, b, c;
@@ -193,7 +193,7 @@ int mx_hash_int(int mxp_x, int mxp_y, int mxp_z)
     return mx_bjfinal(a, b, c);
 }
 
-int mx_hash_int(int x, int y, int z, int xx)
+export int mx_hash_int(int x, int y, int z, int xx)
 {
     int len = 4;
     int a, b, c;
@@ -209,7 +209,7 @@ int mx_hash_int(int x, int y, int z, int xx)
     return mx_bjfinal(a, b, c);
 }
 
-int mx_hash_int(int x, int y, int z, int xx, int yy)
+export int mx_hash_int(int x, int y, int z, int xx, int yy)
 {
     int len = 5;
     int a, b, c;

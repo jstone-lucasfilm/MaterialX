@@ -1,25 +1,4 @@
-uint mx_flake_hash(uint seed, uint i)
-{
-    return (i ^ seed) * 1075385539u; 
-}
-
-uint mx_flake_init_seed(ivec3 i)
-{
-    return mx_flake_hash(mx_flake_hash(mx_flake_hash(0, i.x), i.y), i.z);
-}
-
-uint mx_flake_xorshift32(uint seed)
-{
-    seed ^= seed << 13;
-    seed ^= seed >> 17;
-    seed ^= seed << 5;
-    return seed;
-}
-
-float mx_uint_to_01(uint x)
-{
-    return float(x) / float(0xffffffffu);  // scale to [0, 1)
-}
+#include "mx_noise.glsl"
 
 // "Fast Random Rotation Matrices" by James Arvo, Graphics Gems3 P.117
 vec3 mx_rotate_flake(vec3 p, vec3 i)
@@ -81,11 +60,11 @@ void mx_flake(
 
     // flake priority in [0..1], 0: no flake, flakes with higher priority shadow flakes "below" them
     float flake_priority = 0.0;
-    uint flake_seed = 0;
+    ivec3 flake_cell = ivec3(0);
 
-    // Examine the 3×3×3 lattice neighborhood around the sample cell. Flakes are seeded at cell
+    // Examine the 3x3x3 lattice neighborhood around the sample cell. Flakes are seeded at cell
     // centers but can overlap adjacent cells by up to flake_diameter, so neighbors may contribute
-    // at the sample position. For each neighbor we deterministically generate a seed, reject it
+    // at the sample position. For each neighbor we deterministically generate a hash, reject it
     // by the density probability, compute a per-flake priority, and test the rotated, centered
     // flake position for overlap. The highest-priority overlapping flake is selected.
     for (int i = -1; i < 2; ++i)
@@ -94,14 +73,12 @@ void mx_flake(
         {
             for (int k = -1; k < 2; ++k)
             {
-                uint seed = mx_flake_init_seed(base_P_int + ivec3(i, j, k));
+                ivec3 cell = base_P_int + ivec3(i, j, k);
 
-                seed = mx_flake_xorshift32(seed);
-                if (mx_uint_to_01(seed) > probability)
+                if (mx_bits_to_01(mx_hash_int(cell.x, cell.y, cell.z)) > probability)
                     continue;
 
-                seed = mx_flake_xorshift32(seed);
-                float priority = mx_uint_to_01(seed);
+                float priority = mx_bits_to_01(mx_hash_int(cell.x, cell.y, cell.z, 1));
                 if (priority < flake_priority)
                     continue;
 
@@ -111,9 +88,9 @@ void mx_flake(
                     continue;
 
                 vec3 rot;
-                seed = mx_flake_xorshift32(seed); rot.x = mx_uint_to_01(seed);
-                seed = mx_flake_xorshift32(seed); rot.y = mx_uint_to_01(seed);
-                seed = mx_flake_xorshift32(seed); rot.z = mx_uint_to_01(seed);
+                rot.x = mx_bits_to_01(mx_hash_int(cell.x, cell.y, cell.z, 2));
+                rot.y = mx_bits_to_01(mx_hash_int(cell.x, cell.y, cell.z, 3));
+                rot.z = mx_bits_to_01(mx_hash_int(cell.x, cell.y, cell.z, 4));
                 PP = mx_rotate_flake(PP, rot);
 
                 if (abs(PP.x) <= flake_diameter &&
@@ -121,7 +98,7 @@ void mx_flake(
                     abs(PP.z) <= flake_diameter)
                 {
                     flake_priority = priority;
-                    flake_seed = seed;
+                    flake_cell = cell;
                 }
             }
         }
@@ -138,12 +115,12 @@ void mx_flake(
     }
 
     // create a flake normal by importance sampling a microfacet distribution with given roughness
-    uint seed = flake_seed;
-    float xi0 = mx_uint_to_01(seed); seed = mx_flake_xorshift32(seed);
-    float xi1 = mx_uint_to_01(seed); seed = mx_flake_xorshift32(seed);
+    float xi0 = mx_bits_to_01(mx_hash_int(flake_cell.x, flake_cell.y, flake_cell.z, 5));
+    float xi1 = mx_bits_to_01(mx_hash_int(flake_cell.x, flake_cell.y, flake_cell.z, 6));
 
-    id = int(seed);  // not ideal but MaterialX does not support unsigned integer type
-    rand = mx_uint_to_01(seed);
+    uint id_hash = mx_hash_int(flake_cell.x, flake_cell.y, flake_cell.z, 7);
+    id = int(id_hash);  // not ideal but MaterialX does not support unsigned integer type
+    rand = mx_bits_to_01(id_hash);
     presence = flake_priority;
 
     float phi = M_PI * 2.0 * xi0;
