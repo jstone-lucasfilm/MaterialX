@@ -846,6 +846,14 @@ void Viewer::createAdvancedSettings(ng::ref<Widget> parent)
         setShaderInterfaceType(interfaceType);
     });
 
+    ng::ref<ng::CheckBox> premultipliedBsdfAddBox = new ng::CheckBox(settingsGroup, "Premultiplied BSDF Add");
+    premultipliedBsdfAddBox->set_checked(_genContext.getOptions().premultipliedBsdfAdd);
+    premultipliedBsdfAddBox->set_callback([this](bool enable)
+    {
+        _genContext.getOptions().premultipliedBsdfAdd = enable;
+        reloadShaders();
+    });
+
     ng::ref<ng::Widget> albedoGroup = new Widget(settingsGroup);
     albedoGroup->set_layout(new ng::BoxLayout(ng::Orientation::Horizontal));
     new ng::Label(albedoGroup, "Albedo Method:");

@@ -32,6 +32,18 @@ ShaderGenerator::ShaderGenerator(TypeSystemPtr typeSystem, SyntaxPtr syntax) :
     _typeSystem(typeSystem),
     _syntax(syntax)
 {
+    // Register all graph refactoring passes.
+    // Each pass is gated by its own GenOptions flag.
+    registerRefactor(std::make_shared<ConstantElisionRefactor>());
+    registerRefactor(std::make_shared<DotElisionRefactor>());
+    registerRefactor(std::make_shared<PremultipliedBsdfAddRefactor>());
+    registerRefactor(std::make_shared<DistributeLayerOverMixRefactor>());
+}
+
+void ShaderGenerator::setDefaultOptions(GenOptions& /*options*/) const
+{
+    // Base implementation sets no additional defaults.
+    // Derived generators override to set target-specific defaults.
 }
 
 void ShaderGenerator::emitScopeBegin(ShaderStage& stage, Syntax::Punctuation punc) const
