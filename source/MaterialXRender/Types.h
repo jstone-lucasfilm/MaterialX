@@ -118,7 +118,7 @@ class MX_RENDER_API Half
 
     Half& operator+=(Half rhs) { return operator=(*this + rhs); }
     Half& operator-=(Half rhs) { return operator=(*this - rhs); }
-    Half& operator*=(Half rhs) { return operator=(*this * rhs); }
+    Half& operator*=(Half rhs) { return operator=((*this) * rhs); }
     Half& operator/=(Half rhs) { return operator=(*this / rhs); }
 
     Half operator-() const { return Half(-float(*this)); }

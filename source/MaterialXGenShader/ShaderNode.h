@@ -112,10 +112,13 @@ using ShaderMetadataRegistryPtr = shared_ptr<ShaderMetadataRegistry>;
 class MX_GENSHADER_API ShaderPortFlag
 {
   public:
+    // Preserve aligned `=` columns in the bit-flag table below.
+    // clang-format off
     static const uint32_t UNIFORM        = 1u << 0;
     static const uint32_t EMITTED        = 1u << 1;
     static const uint32_t BIND_INPUT     = 1u << 2;
     static const uint32_t AUTHORED_VALUE = 1u << 3;
+    // clang-format on
 };
 
 /// @class ShaderPort
@@ -333,6 +336,8 @@ class MX_GENSHADER_API ShaderNode
     class Classification
     {
       public:
+        // Preserve aligned `=` columns and inline `///` comments in the classification table below.
+        // clang-format off
         // Node classes
         static const uint32_t TEXTURE       = 1 << 0;  /// Any node that outputs floats, colors, vectors, etc.
         static const uint32_t CLOSURE       = 1 << 1;  /// Any node that represents light integration
@@ -360,6 +365,7 @@ class MX_GENSHADER_API ShaderNode
         static const uint32_t SAMPLE3D      = 1 << 19; /// Can be sampled in 3D (position)
         static const uint32_t GEOMETRIC     = 1 << 20; /// Geometric input
         static const uint32_t DOT           = 1 << 21; /// A dot node
+        // clang-format on
     };
 
     static const ShaderNodePtr NONE;

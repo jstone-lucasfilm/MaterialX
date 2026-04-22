@@ -9,8 +9,10 @@ MATERIALX_NAMESPACE_BEGIN
 
 WgslSyntax::WgslSyntax(TypeSystemPtr typeSystem) : VkSyntax(typeSystem)
 {
-    // Add in WGSL specific keywords
-    registerReservedWords( { 
+    // Add in WGSL specific keywords.
+    // Preserve the flat one-keyword-per-line layout of the reserved-word list below.
+    // clang-format off
+    registerReservedWords( {
         // Keywords (https://www.w3.org/TR/WGSL/#keyword-summary)
         "alias",
         "break",
@@ -184,8 +186,9 @@ WgslSyntax::WgslSyntax(TypeSystemPtr typeSystem) : VkSyntax(typeSystem)
         "where",
         "with",
         "writeonly",
-        "yield"        
+        "yield"
     	} );
+    // clang-format on
 }
 
 

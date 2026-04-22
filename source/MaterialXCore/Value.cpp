@@ -91,10 +91,13 @@ template <class T> string toValueString(const T& data)
 
         // Set float format and precision for the stream
         const Value::FloatFormat fmt = Value::getFloatFormat();
+        // Preserve vertical alignment of nested ternaries.
+        // clang-format off
         ss.setf(std::ios_base::fmtflags(
                 (fmt == Value::FloatFormatFixed ? std::ios_base::fixed :
                 (fmt == Value::FloatFormatScientific ? std::ios_base::scientific : 0))),
             std::ios_base::floatfield);
+        // clang-format on
         ss.precision(Value::getFloatPrecision());
 
         ss << data;
@@ -425,6 +428,8 @@ template <class T> class ValueRegistry
 // Template instantiations
 //
 
+// Each macro line declares one template instantiation; the tabular layout keeps the list readable.
+// clang-format off
 #define INSTANTIATE_TYPE(T, name)                                                                            \
     template <> MX_CORE_API const string TypedValue<T>::TYPE = name;                                         \
     template <> MX_CORE_API const string& TypedValue<T>::getTypeString() const { return TYPE; }              \
@@ -435,6 +440,7 @@ template <class T> class ValueRegistry
     template MX_CORE_API string toValueString(const T& data);                                                \
     template MX_CORE_API T fromValueString(const string& value);                                             \
     ValueRegistry<T> registry##T;
+// clang-format on
 
 // Base types
 INSTANTIATE_TYPE(int, "integer")

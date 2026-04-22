@@ -44,10 +44,10 @@ class LanguageProfileTimes
     void print(const std::string& label, std::ostream& output) const
     {
         output << label << std::endl;
-        output << "\tTotal: " << totalTime << " seconds" << std::endl;;
-        output << "\tSetup: " << setupTime << " seconds" << std::endl;;
-        output << "\tTransparency: " << transparencyTime << " seconds" << std::endl;;
-        output << "\tGeneration: " << generationTime << " seconds" << std::endl;;
+        output << "\tTotal: " << totalTime << " seconds" << std::endl;
+        output << "\tSetup: " << setupTime << " seconds" << std::endl;
+        output << "\tTransparency: " << transparencyTime << " seconds" << std::endl;
+        output << "\tGeneration: " << generationTime << " seconds" << std::endl;
         output << "\tCompile: " << compileTime << " seconds" << std::endl;
         output << "\tRender: " << renderTime << " seconds" << std::endl;
         output << "\tI/O: " << ioTime << " seconds" << std::endl;

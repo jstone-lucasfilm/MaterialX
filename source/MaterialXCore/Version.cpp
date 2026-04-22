@@ -977,6 +977,9 @@ void Document::upgradeVersion()
     // Upgrade from 1.38 to 1.39
     if (majorVersion == 1 && minorVersion == 38)
     {
+        // Channel tables below are laid out by swizzle family (rgb / xyz / patterns),
+        // so that related entries sit on the same row.
+        // clang-format off
         const std::unordered_map<char, size_t> CHANNEL_INDEX_MAP =
         {
             { 'r', 0 }, { 'g', 1 }, { 'b', 2 }, { 'a', 3 },
@@ -1005,6 +1008,7 @@ void Document::upgradeVersion()
             { { "xyz", "x", "y", "z" }, "vector3" },
             { { "rgba", "a" }, "color4" }
         } };
+        // clang-format on
 
         // Convert channels attributes to legacy swizzle nodes, which are then converted
         // to modern nodes in a second pass.

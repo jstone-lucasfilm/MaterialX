@@ -1,0 +1,4 @@
+# JavaScript bindings use Emscripten embind macro tables whose hand-authored
+# layout encodes the binding structure. Automated formatting is disabled for
+# this subtree to preserve that layout.
+DisableFormat: true

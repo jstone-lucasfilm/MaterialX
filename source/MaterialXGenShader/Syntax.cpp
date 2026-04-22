@@ -22,6 +22,8 @@ const string Syntax::SINGLE_LINE_COMMENT = "// ";
 const string Syntax::BEGIN_MULTI_LINE_COMMENT = "/* ";
 const string Syntax::END_MULTI_LINE_COMMENT = " */";
 
+// The channel table below pairs each rgba entry with its xyzw counterpart on the same row.
+// clang-format off
 const std::unordered_map<char, size_t> Syntax::CHANNELS_MAPPING =
 {
     { 'r', 0 }, { 'x', 0 },
@@ -29,6 +31,7 @@ const std::unordered_map<char, size_t> Syntax::CHANNELS_MAPPING =
     { 'b', 2 }, { 'z', 2 },
     { 'a', 3 }, { 'w', 3 }
 };
+// clang-format on
 
 //
 // Syntax methods

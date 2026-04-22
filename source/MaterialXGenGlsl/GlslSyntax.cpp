@@ -100,7 +100,9 @@ const StringVec GlslSyntax::VEC4_MEMBERS = { ".x", ".y", ".z", ".w" };
 GlslSyntax::GlslSyntax(TypeSystemPtr typeSystem) :
     Syntax(typeSystem)
 {
-    // Add in all reserved words and keywords in GLSL
+    // Add in all reserved words and keywords in GLSL.
+    // Keywords below are grouped by type family (mat/vec/sampler/image/...) for readability.
+    // clang-format off
     registerReservedWords(
         { "centroid", "flat", "smooth", "noperspective", "patch", "sample",
           "break", "continue", "do", "for", "while", "switch", "case", "default",
@@ -143,6 +145,7 @@ GlslSyntax::GlslSyntax(TypeSystemPtr typeSystem) :
           "imageBuffer", "iimageBuffer", "uimageBuffer",
           "sizeof", "cast", "namespace", "using", "row_major",
           "mix", "sampler" });
+    // clang-format on
 
     // Register restricted tokens in GLSL
     StringMap tokens;

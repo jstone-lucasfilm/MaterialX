@@ -1,0 +1,4 @@
+# Python bindings use pybind11 macro tables and chained `.def(...)` calls
+# whose hand-authored layout encodes the binding structure. Automated
+# formatting is disabled for this subtree to preserve that layout.
+DisableFormat: true

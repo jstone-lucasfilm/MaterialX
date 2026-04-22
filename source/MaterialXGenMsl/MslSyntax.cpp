@@ -100,7 +100,9 @@ const StringVec MslSyntax::VEC4_MEMBERS = { ".x", ".y", ".z", ".w" };
 
 MslSyntax::MslSyntax(TypeSystemPtr typeSystem) : Syntax(typeSystem)
 {
-    // Add in all reserved words and keywords in MSL
+    // Add in all reserved words and keywords in MSL.
+    // Keywords below are grouped by type family (float/int/texture/...) for readability.
+    // clang-format off
     registerReservedWords(
         { "centroid", "flat", "smooth", "noperspective", "patch", "sample",
           "break", "continue", "do", "for", "while", "switch", "case", "default",
@@ -124,6 +126,7 @@ MslSyntax::MslSyntax(TypeSystemPtr typeSystem) : Syntax(typeSystem)
           "buffer",
           "sizeof", "cast", "namespace", "using", "row_major",
           "mix", "sampler" });
+    // clang-format on
 
     // Register restricted tokens in MSL
     StringMap tokens;

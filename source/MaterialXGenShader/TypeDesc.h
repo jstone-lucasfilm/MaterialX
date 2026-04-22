@@ -253,9 +253,12 @@ private:
 };
 
 /// Macro to define global type descriptions for commonly used types.
+// The inline accessor function is deliberately compact so the macro reads as a table entry.
+// clang-format off
 #define TYPEDESC_DEFINE_TYPE(T, name, basetype, semantic, size) \
        inline const TypeDesc::DataBlock* T##_data() { static const TypeDesc::DataBlock _data(name); return &_data; } \
        static const TypeDesc T(name, basetype, semantic, size, T##_data());
+// clang-format on
 
 namespace Type
 {

@@ -955,6 +955,8 @@ const GlslProgram::InputMap& GlslProgram::updateUniformsList()
                 const auto& variableColorspace = v->getColorSpace();
                 const auto& variableSemantic = v->getSemantic();
 
+                // Preserve the multi-line layout of the lambda captures and signatures for readability.
+                // clang-format off
                 const auto populateUniformInput =
                     [this, variablePath, variableUnit, variableColorspace, variableSemantic, &errors, uniforms, &uniformTypeMismatchFound]
                     (TypeDesc typedesc, const string& variableName, ConstValuePtr variableValue) -> void
@@ -994,6 +996,8 @@ const GlslProgram::InputMap& GlslProgram::updateUniformsList()
                                 }
                                 else
                                 {
+                                    // Preserve one field-per-line layout of this diagnostic message.
+                                    // clang-format off
                                     errors.push_back(
                                         "Pixel shader uniform block type mismatch [" + uniforms.getName() + "]. "
                                         + "Name: \"" + variableName_impl
@@ -1003,6 +1007,7 @@ const GlslProgram::InputMap& GlslProgram::updateUniformsList()
                                         + "\". Unit: \"" + (!variableUnit.empty() ? variableUnit : "<none>")
                                         + "\". Colorspace: \"" + (!variableColorspace.empty() ? variableColorspace : "<none>")
                                         + "\". GLType: " + std::to_string(glType));
+                                    // clang-format on
                                     uniformTypeMismatchFound = true;
                                 }
                             }
@@ -1029,6 +1034,7 @@ const GlslProgram::InputMap& GlslProgram::updateUniformsList()
 
                     return populateUniformInput_impl(typedesc, variableName, variableValue, populateUniformInput_impl);
                 };
+                // clang-format on
 
                 populateUniformInput(v->getType(), v->getVariable(), v->getValue());
             }
@@ -1055,6 +1061,8 @@ const GlslProgram::InputMap& GlslProgram::updateUniformsList()
                     }
                     else
                     {
+                        // Preserve one field-per-line layout of this diagnostic message.
+                        // clang-format off
                         errors.push_back(
                             "Vertex shader uniform block type mismatch [" + uniforms.getName() + "]. "
                             + "Name: \"" + v->getVariable()
@@ -1065,6 +1073,7 @@ const GlslProgram::InputMap& GlslProgram::updateUniformsList()
                             + "\". Colorspace: \"" + (!v->getColorSpace().empty() ? v->getColorSpace() : "<none>")
                             + "\". GLType: " + std::to_string(mapTypeToOpenGLType(v->getType()))
                         );
+                        // clang-format on
                         uniformTypeMismatchFound = true;
                     }
                 }
@@ -1180,6 +1189,8 @@ const GlslProgram::InputMap& GlslProgram::updateAttributesList()
                     }
                     else
                     {
+                        // Preserve one field-per-line layout of this diagnostic message.
+                        // clang-format off
                         errors.push_back(
                             "Vertex shader attribute type mismatch in block. Name: \"" + v->getVariable()
                             + "\". Type: \"" + v->getType().getName()
@@ -1187,6 +1198,7 @@ const GlslProgram::InputMap& GlslProgram::updateAttributesList()
                             + "\". Value: \"" + (v->getValue() ? v->getValue()->getValueString() : "<none>")
                             + "\". GLType: " + std::to_string(mapTypeToOpenGLType(v->getType()))
                         );
+                        // clang-format on
                         uniformTypeMismatchFound = true;
                     }
                 }

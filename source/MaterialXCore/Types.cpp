@@ -77,6 +77,10 @@ Color3 Color3::srgbToLinear() const
     return res;
 }
 
+// Matrix methods below are hand-formatted to preserve column alignment
+// and semantic spacing in the mathematical expressions.
+// clang-format off
+
 //
 // Matrix33 methods
 //
@@ -308,5 +312,6 @@ Matrix44 Matrix44::createRotationZ(float angle)
                     0.0f, 0.0f, 1.0f, 0.0f,
                     0.0f, 0.0f, 0.0f, 1.0f);
 }
+// clang-format on
 
 MATERIALX_NAMESPACE_END

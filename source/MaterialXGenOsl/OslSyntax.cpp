@@ -269,7 +269,9 @@ const StringVec OslSyntax::COLOR4_MEMBERS = { ".rgb[0]", ".rgb[1]", ".rgb[2]", "
 OslSyntax::OslSyntax(TypeSystemPtr typeSystem) :
     Syntax(typeSystem)
 {
-    // Add in all reserved words and keywords in OSL
+    // Add in all reserved words and keywords in OSL.
+    // Keywords below are grouped by category (types, stdlib functions, BSDFs) for readability.
+    // clang-format off
     registerReservedWords(
         { // OSL types and keywords
           "and", "break", "closure", "color", "continue", "do", "else", "emit", "float", "for", "if", "illuminance",
@@ -293,6 +295,7 @@ OslSyntax::OslSyntax(TypeSystemPtr typeSystem) :
           "oren_nayar_diffuse_bsdf", "burley_diffuse_bsdf", "dielectric_bsdf", "conductor_bsdf", "generalized_schlick_bsdf",
           "translucent_bsdf", "transparent_bsdf", "subsurface_bssrdf", "sheen_bsdf", "uniform_edf", "anisotropic_vdf",
           "medium_vdf", "layer", "artistic_ior" });
+    // clang-format on
 
     //
     // Register type syntax handlers for each data type.

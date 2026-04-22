@@ -1078,6 +1078,8 @@ const MslProgram::InputMap& MslProgram::updateUniformsList()
                                 }
                                 else
                                 {
+                                    // Preserve one field-per-line layout of this diagnostic message.
+                                    // clang-format off
                                     errors.push_back(
                                         "Pixel shader uniform block type mismatch [" + uniforms.getName() + "]. "
                                         + "Name: \"" + variableName
@@ -1086,6 +1088,7 @@ const MslProgram::InputMap& MslProgram::updateUniformsList()
                                         + "\". Value: \"" + (variableValue ? variableValue->getValueString() : "<none>")
                                         + "\". resourceType: " + std::to_string(mapTypeToMetalType(variableTypeDesc))
                                     );
+                                    // clang-format on
                                     uniformTypeMismatchFound = true;
                                 }
                             }
@@ -1133,6 +1136,8 @@ const MslProgram::InputMap& MslProgram::updateUniformsList()
                     }
                     else
                     {
+                        // Preserve one field-per-line layout of this diagnostic message.
+                        // clang-format off
                         errors.push_back(
                             "Vertex shader uniform block type mismatch [" + uniforms.getName() + "]. "
                             + "Name: \"" + v->getVariable()
@@ -1142,6 +1147,7 @@ const MslProgram::InputMap& MslProgram::updateUniformsList()
                             + "\". Unit: \"" + (!v->getUnit().empty() ? v->getUnit() : "<none>")
                             + "\". resourceType: " + std::to_string(mapTypeToMetalType(v->getType()))
                         );
+                        // clang-format on
                         uniformTypeMismatchFound = true;
                     }
                 }
@@ -1549,6 +1555,8 @@ const MslProgram::InputMap& MslProgram::updateAttributesList()
                     }
                     else
                     {
+                        // Preserve one field-per-line layout of this diagnostic message.
+                        // clang-format off
                         errors.push_back(
                             "Vertex shader attribute type mismatch in block. Name: \"" + v->getVariable()
                             + "\". Type: \"" + v->getType().getName()
@@ -1556,6 +1564,7 @@ const MslProgram::InputMap& MslProgram::updateAttributesList()
                             + "\". Value: \"" + (v->getValue() ? v->getValue()->getValueString() : "<none>")
                             + "\". resourceType: " + std::to_string(mapTypeToMetalType(v->getType()))
                         );
+                        // clang-format on
                         uniformTypeMismatchFound = true;
                     }
                 }

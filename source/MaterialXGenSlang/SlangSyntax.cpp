@@ -126,7 +126,9 @@ const StringVec SlangSyntax::VEC4_MEMBERS = { ".x", ".y", ".z", ".w" };
 SlangSyntax::SlangSyntax(TypeSystemPtr typeSystem) :
     Syntax(typeSystem)
 {
-    // Add in all reserved words and keywords in Slang
+    // Add in all reserved words and keywords in Slang.
+    // Keywords below are grouped by category (storage, access, control flow, ...) for readability.
+    // clang-format off
     registerReservedWords({ "throws", "static", "const", "in", "out", "inout",
                             "ref", "__subscript", "__init", "property", "get", "set",
                             "class", "struct", "interface", "public", "private", "internal",
@@ -143,6 +145,7 @@ SlangSyntax::SlangSyntax(TypeSystemPtr typeSystem) :
                             "__generic", "__exported", "import", "enum", "break", "continue",
                             "discard", "defer", "cbuffer", "tbuffer", "func", "is",
                             "as", "nullptr", "none", "true", "false", "SamplerTexture2D" });
+    // clang-format on
 
     // Register restricted tokens in Slang
     // No invalid tokens

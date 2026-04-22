@@ -11,6 +11,9 @@ MATERIALX_NAMESPACE_BEGIN
 namespace HW
 {
 
+// Constants below are hand-formatted with aligned '=' columns for readability
+// as a reference table.
+// clang-format off
 const string T_IN_POSITION                    = "$inPosition";
 const string T_IN_NORMAL                      = "$inNormal";
 const string T_IN_TANGENT                     = "$inTangent";
@@ -169,6 +172,7 @@ const TypedValue<Vector2> VEC2_ZERO            = TypedValue(Vector2(0.f, 0.f));
 const TypedValue<Vector2> VEC2_ONE             = TypedValue(Vector2(1.f, 1.f));
 const TypedValue<Vector3> VEC3_ZERO            = TypedValue(Vector3(0.f, 0.f, 0.f));
 const TypedValue<Vector3> VEC3_ONE             = TypedValue(Vector3(1.f, 1.f, 1.f));
+// clang-format on
 
 } // namespace HW
 

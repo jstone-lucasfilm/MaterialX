@@ -195,6 +195,7 @@ MdlSyntax::MdlSyntax(TypeSystemPtr typeSystem) : Syntax(typeSystem)
 {
     // Add in all reserved words and keywords in MDL
     // Formatted as in the MDL Specification 1.9.2 for easy comparing
+    // clang-format off
     registerReservedWords(
         {   // Reserved words
             "annotation",       "double2",      "float",        "in",                           "operator",
@@ -228,6 +229,7 @@ MdlSyntax::MdlSyntax(TypeSystemPtr typeSystem) : Syntax(typeSystem)
             "external",     "half3x2",  "lambda",   "public",           "template",     "volatile",
             "foreach",      "half3x3",  "long",     "reinterpret_cast", "this",         "wchar_t",
         });
+    // clang-format on
 
     // Register restricted tokens in MDL
     StringMap tokens;

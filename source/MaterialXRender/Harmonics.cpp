@@ -14,11 +14,14 @@ namespace
 
 const double PI = std::acos(-1.0);
 
+// Preserve the decimal-aligned columns in this reference table of SH basis constants.
+// clang-format off
 const double BASIS_CONSTANT_0 = std::sqrt( 1.0 / ( 4.0 * PI));
 const double BASIS_CONSTANT_1 = std::sqrt( 3.0 / ( 4.0 * PI));
 const double BASIS_CONSTANT_2 = std::sqrt(15.0 / ( 4.0 * PI));
 const double BASIS_CONSTANT_3 = std::sqrt( 5.0 / (16.0 * PI));
 const double BASIS_CONSTANT_4 = std::sqrt(15.0 / (16.0 * PI));
+// clang-format on
 
 const double COSINE_CONSTANT_0 = 1.0;
 const double COSINE_CONSTANT_1 = 2.0 / 3.0;
@@ -68,6 +71,8 @@ Sh3ScalarCoeffs evalDirection(const Vector3d& dir)
     const double& y = dir[1];
     const double& z = dir[2];
 
+    // Each line below contains one spherical-harmonic basis coefficient, matching the reference papers.
+    // clang-format off
     return Sh3ScalarCoeffs(
     {
         BASIS_CONSTANT_0,
@@ -80,6 +85,7 @@ Sh3ScalarCoeffs evalDirection(const Vector3d& dir)
         BASIS_CONSTANT_2 * x * z,
         BASIS_CONSTANT_4 * (x * x - y * y)
     });
+    // clang-format on
 }
 
 } // anonymous namespace

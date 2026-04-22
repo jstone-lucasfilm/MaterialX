@@ -1,6 +1,7 @@
 AllowShortBlocksOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: Inline
-AllowShortLambdasOnASingleLine: false
+AllowShortLambdasOnASingleLine: Inline
 AlwaysBreakTemplateDeclarations: No
 BreakBeforeBraces: Allman
 BreakConstructorInitializers: AfterColon
@@ -8,6 +9,7 @@ BreakConstructorInitializersBeforeComma: true
 ColumnLimit: 0
 Cpp11BracedListStyle: false
 IndentCaseLabels: true
+IndentExternBlock: NoIndent
 IndentPPDirectives: BeforeHash
 IndentWidth: 4
 LambdaBodyIndentation: OuterScope
