@@ -190,33 +190,31 @@ void mx_chiang_hair_bsdf(ClosureData closureData, vec3 tint_R, vec3 tint_TT, vec
                          vec2 roughness_R, vec2 roughness_TT, vec2 roughness_TRT, float cuticle_angle,
                          vec3 absorption_coefficient, vec3 N, vec3 X, inout BSDF bsdf)
 {
-    vec3 V = closureData.V;
-    vec3 L = closureData.L;
+    N = mx_forward_facing_normal(N, closureData.N, closureData.V);
 
-    N = mx_forward_facing_normal(N, V);
+    // Build the tangent frame for the hair fiber, with X as the fiber tangent,
+    // and express the view direction in tangent space.
+    TangentFrame frame = mx_tangent_frame(N, X);
+    vec3 Vt = mx_world_to_tangent(frame, closureData.V);
 
     bsdf.throughput = vec3(0.0);
 
     if (closureData.closureType == CLOSURE_TYPE_REFLECTION)
     {
-        X = normalize(X - dot(X, N) * N);
-        vec3 Y = cross(N, X);
+        vec3 Lt = mx_world_to_tangent(frame, closureData.L);
 
-        float sinThetaO = dot(V, X);
-        float sinThetaI = dot(L, X);
+        float sinThetaO = Vt.x;
+        float sinThetaI = Lt.x;
         float cosThetaO = mx_hair_transform_sin_cos(sinThetaO);
         float cosThetaI = mx_hair_transform_sin_cos(sinThetaI);
 
-        float y1 = dot(L, N);
-        float x1 = dot(L, Y);
-        float y2 = dot(V, N);
-        float x2 = dot(V, Y);
-        float phi = mx_atan(y1 * x2 - y2 * x1, x1 * x2 + y1 * y2);
+        float phi = mx_atan(Lt.z * Vt.y - Vt.z * Lt.y, Lt.y * Vt.y + Lt.z * Vt.z);
 
-        vec3 k1_p = normalize(V - X * dot(V, X));
-        float cosGammaO = dot(N, k1_p);
+        // Project V onto the plane perpendicular to the fiber tangent (the YN plane).
+        vec3 k1_p = normalize(vec3(0.0, Vt.y, Vt.z));
+        float cosGammaO = k1_p.z;
         float sinGammaO = mx_hair_transform_sin_cos(cosGammaO);
-        if (dot(k1_p, Y) > 0.0)
+        if (k1_p.y > 0.0)
             sinGammaO = -sinGammaO;
         float gammaO = asin(sinGammaO);
 
@@ -270,7 +268,7 @@ void mx_chiang_hair_bsdf(ClosureData closureData, vec3 tint_R, vec3 tint_TT, vec
     {
         // This indirect term is a *very* rough approximation.
 
-        float NdotV = clamp(dot(N, V), M_FLOAT_EPS, 1.0);
+        float NdotV = clamp(Vt.z, M_FLOAT_EPS, 1.0);
         FresnelData fd = mx_init_fresnel_dielectric(ior, 0.0, 1.0);
         vec3 F = mx_compute_fresnel(NdotV, fd);
 
@@ -283,7 +281,7 @@ void mx_chiang_hair_bsdf(ClosureData closureData, vec3 tint_R, vec3 tint_TT, vec
         vec3 comp = mx_ggx_energy_compensation(NdotV, avgAlpha, F);
         vec3 dirAlbedo = mx_ggx_dir_albedo(NdotV, avgAlpha, F0, 1.0) * comp;
 
-        vec3 Li = mx_environment_radiance(N, V, X, safeAlpha, 0, fd);
+        vec3 Li = mx_environment_radiance(frame, Vt, safeAlpha, 0, fd);
         vec3 tint = (tint_R + tint_TT + tint_TRT) / vec3(3.0);  // ?
 
         bsdf.response = Li * comp * tint;

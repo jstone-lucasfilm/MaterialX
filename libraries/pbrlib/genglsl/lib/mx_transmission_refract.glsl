@@ -1,6 +1,6 @@
 #include "mx_microfacet_specular.glsl"
 
-vec3 mx_surface_transmission(vec3 N, vec3 V, vec3 X, vec2 alpha, int distribution, FresnelData fd, vec3 tint)
+vec3 mx_surface_transmission(TangentFrame frame, vec3 Vt, vec2 alpha, int distribution, FresnelData fd, vec3 tint)
 {
     // Approximate the appearance of surface transmission as glossy
     // environment map refraction, ignoring any scene geometry that might
@@ -10,5 +10,5 @@ vec3 mx_surface_transmission(vec3 N, vec3 V, vec3 X, vec2 alpha, int distributio
     {
         tint = mx_square(tint);
     }
-    return mx_environment_radiance(N, V, X, alpha, distribution, fd) * tint;
+    return mx_environment_radiance(frame, Vt, alpha, distribution, fd) * tint;
 }

@@ -52,10 +52,11 @@ vec3 mx_fresnel_schlick(float cosTheta, vec3 F0, vec3 F90, float exponent)
     return mix(F0, F90, pow(x, exponent));
 }
 
-// Enforce that the given normal is forward-facing from the specified view direction.
-vec3 mx_forward_facing_normal(vec3 N, vec3 V)
+// Enforce that the given shading normal is forward-facing from the specified
+// view direction, using the geometric normal as the reference for the test.
+vec3 mx_forward_facing_normal(vec3 N, vec3 Ng, vec3 V)
 {
-    return (dot(N, V) < 0.0) ? -N : N;
+    return (dot(Ng, V) < 0.0) ? -N : N;
 }
 
 // https://www.graphics.rwth-aachen.de/publication/2/jgt.pdf
@@ -105,14 +106,47 @@ float mx_uniform_hemisphere_PDF()
     return 0.5 * M_PI_INV;
 }
 
-// Construct an orthonormal basis from a unit vector.
+// A tangent frame defined as three orthonormal world-space vectors.
+struct TangentFrame
+{
+    vec3 X;
+    vec3 Y;
+    vec3 N;
+};
+
+// Build a tangent frame from a normal and candidate tangent vector.
+TangentFrame mx_tangent_frame(vec3 N, vec3 X)
+{
+    TangentFrame frame;
+    frame.X = normalize(X - dot(X, N) * N);
+    frame.Y = cross(N, frame.X);
+    frame.N = N;
+    return frame;
+}
+
+// Build a tangent frame from a normal vector, generating an arbitrary
+// orthogonal tangent vector.
 // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
-mat3 mx_orthonormal_basis(vec3 N)
+TangentFrame mx_tangent_frame(vec3 N)
 {
     float sign = (N.z < 0.0) ? -1.0 : 1.0;
     float a = -1.0 / (sign + N.z);
     float b = N.x * N.y * a;
-    vec3 X = vec3(1.0 + sign * N.x * N.x * a, sign * b, -sign * N.x);
-    vec3 Y = vec3(b, sign + N.y * N.y * a, -N.y);
-    return mat3(X, Y, N);
+    TangentFrame frame;
+    frame.X = vec3(1.0 + sign * N.x * N.x * a, sign * b, -sign * N.x);
+    frame.Y = vec3(b, sign + N.y * N.y * a, -N.y);
+    frame.N = N;
+    return frame;
+}
+
+// Transform a vector from world to tangent space.
+vec3 mx_world_to_tangent(TangentFrame frame, vec3 v)
+{
+    return vec3(dot(v, frame.X), dot(v, frame.Y), dot(v, frame.N));
+}
+
+// Transform a vector from tangent to world space.
+vec3 mx_tangent_to_world(TangentFrame frame, vec3 v)
+{
+    return frame.X * v.x + frame.Y * v.y + frame.N * v.z;
 }

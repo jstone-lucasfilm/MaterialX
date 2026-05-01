@@ -11,7 +11,7 @@ void mx_sheen_bsdf(ClosureData closureData, float weight, vec3 color, float roug
     vec3 V = closureData.V;
     vec3 L = closureData.L;
 
-    N = mx_forward_facing_normal(N, V);
+    N = mx_forward_facing_normal(N, closureData.N, V);
     float NdotV = clamp(dot(N, V), M_FLOAT_EPS, 1.0);
 
     if (closureData.closureType == CLOSURE_TYPE_REFLECTION)

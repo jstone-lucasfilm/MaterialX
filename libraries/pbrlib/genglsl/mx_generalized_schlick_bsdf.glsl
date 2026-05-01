@@ -12,15 +12,15 @@ void mx_generalized_schlick_bsdf(ClosureData closureData, float weight, vec3 col
         return;
     }
 
-    vec3 V = closureData.V;
-    vec3 L = closureData.L;
+    N = mx_forward_facing_normal(N, closureData.N, closureData.V);
 
-    // Retroreflective mode is only supported for reflection and indirect
+    // Build the tangent frame and express the view direction in tangent space.
+    TangentFrame frame = mx_tangent_frame(N, X);
+    vec3 Vt = mx_world_to_tangent(frame, closureData.V);
+    // Retroreflective mode is only supported for reflection and indirect.
     if (retroreflective && (closureData.closureType != CLOSURE_TYPE_TRANSMISSION))
-        V = reflect(-V, N);
-    
-    N = mx_forward_facing_normal(N, V);
-    float NdotV = clamp(dot(N, V), M_FLOAT_EPS, 1.0);
+        Vt.xy = -Vt.xy;
+    float NdotV = clamp(Vt.z, M_FLOAT_EPS, 1.0);
 
     vec3 safeColor0 = max(color0, 0.0);
     vec3 safeColor82 = max(color82, 0.0);
@@ -32,14 +32,11 @@ void mx_generalized_schlick_bsdf(ClosureData closureData, float weight, vec3 col
 
     if (closureData.closureType == CLOSURE_TYPE_REFLECTION)
     {
-        X = normalize(X - dot(X, N) * N);
-        vec3 Y = cross(N, X);
-        vec3 H = normalize(L + V);
+        vec3 Lt = mx_world_to_tangent(frame, closureData.L);
+        vec3 Ht = normalize(Vt + Lt);
 
-        float NdotL = clamp(dot(N, L), M_FLOAT_EPS, 1.0);
-        float VdotH = clamp(dot(V, H), M_FLOAT_EPS, 1.0);
-
-        vec3 Ht = vec3(dot(H, X), dot(H, Y), dot(H, N));
+        float NdotL = clamp(Lt.z, M_FLOAT_EPS, 1.0);
+        float VdotH = clamp(dot(Vt, Ht), M_FLOAT_EPS, 1.0);
 
         vec3  F = mx_compute_fresnel(VdotH, fd);
         float D = mx_ggx_NDF(Ht, safeAlpha);
@@ -66,7 +63,7 @@ void mx_generalized_schlick_bsdf(ClosureData closureData, float weight, vec3 col
         {
             float avgF0 = dot(safeColor0, vec3(1.0 / 3.0));
             fd.ior = vec3(mx_f0_to_ior(avgF0));
-            bsdf.response = mx_surface_transmission(N, V, X, safeAlpha, distribution, fd, vec3(1.0)) * weight;
+            bsdf.response = mx_surface_transmission(frame, Vt, safeAlpha, distribution, fd, vec3(1.0)) * weight;
         }
     }
     else if (closureData.closureType == CLOSURE_TYPE_INDIRECT)
@@ -78,7 +75,7 @@ void mx_generalized_schlick_bsdf(ClosureData closureData, float weight, vec3 col
         float avgDirAlbedo = dot(dirAlbedo, vec3(1.0 / 3.0));
         bsdf.throughput = vec3(1.0 - avgDirAlbedo * weight);
 
-        vec3 Li = mx_environment_radiance(N, V, X, safeAlpha, distribution, fd);
+        vec3 Li = mx_environment_radiance(frame, Vt, safeAlpha, distribution, fd);
         bsdf.response = Li * comp * weight;
     }
 }

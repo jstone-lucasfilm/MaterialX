@@ -23,13 +23,13 @@ vec3 mx_latlong_map_projection_inverse(vec2 uv)
 vec3 mx_generate_prefilter_env()
 {
     // The tangent view vector is aligned with the normal.
-    vec3 V = vec3(0.0, 0.0, 1.0);
+    vec3 Vt = vec3(0.0, 0.0, 1.0);
     float NdotV = 1.0;
 
     // Compute derived properties.
     vec2 uv = gl_FragCoord.xy * pow(2.0, $envPrefilterMip) / vec2(textureSize($envRadianceSampler2D, 0));
-    vec3 worldN = mx_latlong_map_projection_inverse(uv);
-    mat3 tangentToWorld = mx_orthonormal_basis(worldN);
+    vec3 Nw = mx_latlong_map_projection_inverse(uv);
+    TangentFrame frame = mx_tangent_frame(Nw);
     float alpha = mx_latlong_lod_to_alpha(float($envPrefilterMip));
     float G1V = mx_ggx_smith_G1(NdotV, alpha);
 
@@ -42,18 +42,18 @@ vec3 mx_generate_prefilter_env()
         vec2 Xi = mx_spherical_fibonacci(i, envRadianceSamples);
 
         // Compute the half vector and incoming light direction.
-        vec3 H = mx_ggx_importance_sample_VNDF(Xi, V, vec2(alpha));
-        vec3 L = -V + 2.0 * H.z * H;
+        vec3 Ht = mx_ggx_importance_sample_VNDF(Xi, Vt, vec2(alpha));
+        vec3 Lt = -Vt + 2.0 * Ht.z * Ht;
 
         // Compute dot products for this sample.
-        float NdotL = clamp(L.z, M_FLOAT_EPS, 1.0);
+        float NdotL = clamp(Lt.z, M_FLOAT_EPS, 1.0);
 
         // Compute the geometric term.
         float G = mx_ggx_smith_G2(NdotL, NdotV, alpha);
 
         // Sample the environment light from the given direction.
-        vec3 Lw = mx_matrix_mul(tangentToWorld, L);
-        float pdf = mx_ggx_VNDF_reflection_PDF(H, vec2(alpha), G1V, NdotV);
+        vec3 Lw = mx_tangent_to_world(frame, Lt);
+        float pdf = mx_ggx_VNDF_reflection_PDF(Ht, vec2(alpha), G1V, NdotV);
         float lod = mx_latlong_compute_lod(Lw, pdf, float($envRadianceMips - 1), envRadianceSamples);
         vec3 sampleColor = mx_latlong_map_lookup(Lw, $envMatrix, lod, $envRadiance);
 

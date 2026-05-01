@@ -114,28 +114,30 @@ float mx_zeltner_sheen_ltc_bInv(float x, float y)
 }
 
 // V and N are assumed to be unit vectors.
-mat3 mx_orthonormal_basis_ltc(vec3 V, vec3 N, float NdotV)
+TangentFrame mx_tangent_frame_ltc(vec3 V, vec3 N, float NdotV)
 {
     // Generate a tangent vector in the plane of V and N.
-    // This required to correctly orient the LTC lobe.
-    vec3 X = V - N*NdotV;
+    // This is required to correctly orient the LTC lobe.
+    vec3 X = V - N * NdotV;
     float lenSqr = dot(X, X);
     if (lenSqr > 0.0)
     {
-        X *= mx_inversesqrt(lenSqr);
-        vec3 Y = cross(N, X);
-        return mat3(X, Y, N);
+        TangentFrame frame;
+        frame.X = X * mx_inversesqrt(lenSqr);
+        frame.Y = cross(N, frame.X);
+        frame.N = N;
+        return frame;
     }
 
     // If lenSqr == 0, then V == N, so any orthonormal basis will do.
-    return mx_orthonormal_basis(N);
+    return mx_tangent_frame(N);
 }
 
 // Multiplication by directional albedo is handled by the calling function.
 float mx_zeltner_sheen_brdf(vec3 L, vec3 V, vec3 N, float NdotV, float roughness)
 {
-    mat3 toLTC = transpose(mx_orthonormal_basis_ltc(V, N, NdotV));
-    vec3 w = mx_matrix_mul(toLTC, L);
+    TangentFrame frame = mx_tangent_frame_ltc(V, N, NdotV);
+    vec3 w = mx_world_to_tangent(frame, L);
 
     float aInv = mx_zeltner_sheen_ltc_aInv(NdotV, roughness);
     float bInv = mx_zeltner_sheen_ltc_bInv(NdotV, roughness);
@@ -181,8 +183,6 @@ vec3 mx_zeltner_sheen_importance_sample(vec2 Xi, vec3 V, vec3 N, float roughness
     //      = Do(w) . (aInv * dot(w, w))^2
     pdf = mx_cosine_hemisphere_PDF(w.z) * mx_square(aInv * lenSqr);
 
-    mat3 fromLTC = mx_orthonormal_basis_ltc(V, N, NdotV);
-    w = mx_matrix_mul(fromLTC, w);
-
-    return w;
+    TangentFrame frame = mx_tangent_frame_ltc(V, N, NdotV);
+    return mx_tangent_to_world(frame, w);
 }
