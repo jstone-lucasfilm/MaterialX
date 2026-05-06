@@ -81,7 +81,10 @@ void MetalFramebuffer::resize(unsigned int width, unsigned int height, bool forc
                                         height:height
                                      mipmapped:NO];
         [texDescriptor setStorageMode:MTLStorageModePrivate];
-        [texDescriptor setUsage:MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead | MTLTextureUsageShaderWrite];
+        // The framebuffer color texture is only ever bound as a render-pass
+        // attachment and copied via blit; it is never sampled or written by a
+        // shader.
+        [texDescriptor setUsage:MTLTextureUsageRenderTarget];
 
         if (extColorTexture == nil)
         {

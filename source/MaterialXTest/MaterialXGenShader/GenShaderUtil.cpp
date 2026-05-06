@@ -1003,6 +1003,16 @@ void TestSuiteOptions::print(std::ostream& output) const
     output << "\tIrradiance IBL File Path: " << irradianceIBLPath.asString() << std::endl;
     output << "\tExtra library paths: " << extraLibraryPaths.asString() << std::endl;
     output << "\tRender test paths: " << renderTestPaths.asString() << std::endl;
+    output << "\tRender test exclude files: ";
+    {
+        bool first = true;
+        for (const auto& f : renderTestExcludeFiles)
+        {
+            output << (first ? "" : ", ") << f;
+            first = false;
+        }
+        output << std::endl;
+    }
     output << "\tEnable Reference Quality: " << enableReferenceQuality << std::endl;
     output << "\tOutput Directory: " << (outputDirectory.isEmpty() ? "(default)" : outputDirectory.asString()) << std::endl;
     output << "\tEnable Tracing: " << enableTracing << std::endl;
@@ -1030,6 +1040,7 @@ bool TestSuiteOptions::readOptions(const std::string& optionFile)
     const std::string SPHERE_GEOMETRY("sphere.obj");
     const std::string EXTRA_LIBRARY_PATHS("extraLibraryPaths");
     const std::string RENDER_TEST_PATHS("renderTestPaths");
+    const std::string RENDER_TEST_EXCLUDE_FILES("renderTestExcludeFiles");
     const std::string ENABLE_REFERENCE_QUALITY("enableReferenceQuality");
     const std::string OUTPUT_DIRECTORY_STRING("outputDirectory");
     const std::string ENABLE_TRACING_STRING("enableTracing");
@@ -1127,6 +1138,15 @@ bool TestSuiteOptions::readOptions(const std::string& optionFile)
                             renderTestPaths.append(mx::FilePath(l));
                         }
                     }
+                    else if (name == RENDER_TEST_EXCLUDE_FILES)
+                    {
+                        mx::StringVec list = mx::splitString(p->getValueString(), ",");
+                        for (const auto& l : list)
+                        {
+                            if (!l.empty())
+                                renderTestExcludeFiles.insert(l);
+                        }
+                    }
                     else if (name == ENABLE_REFERENCE_QUALITY)
                     {
                         enableReferenceQuality = val->asA<bool>();
@@ -1168,6 +1188,10 @@ bool TestSuiteOptions::readOptions(const std::string& optionFile)
         {
             checkImplCount = false;
         }
+
+#if defined(MATERIALX_TEST_REFERENCE_QUALITY)
+        enableReferenceQuality = true;
+#endif
         return true;
     }
     catch (mx::Exception& e)

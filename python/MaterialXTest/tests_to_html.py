@@ -12,6 +12,45 @@ try:
 except Exception:
     DIFF_ENABLED = False
 
+def parseRenderTestPaths(optionsPath):
+    """Parse the renderTestPaths input from a MaterialX _options.mtlx file.
+
+    Returns a list of path strings in declared order, or [] if the file cannot
+    be read or the input is missing.
+    """
+    try:
+        import xml.etree.ElementTree as ET
+        tree = ET.parse(optionsPath)
+    except Exception as e:
+        print("Failed to read " + optionsPath + ": " + str(e))
+        return []
+    for elem in tree.getroot().iter():
+        tag = elem.tag.rsplit('}', 1)[-1]
+        if tag == 'input' and elem.get('name') == 'renderTestPaths':
+            value = elem.get('value', '')
+            return [p.strip() for p in value.split(',') if p.strip()]
+    print("renderTestPaths input not found in " + optionsPath)
+    return []
+
+def orderIndexFor(path, orderPaths):
+    """Return the index of the first orderPaths entry that overlaps path at
+    directory boundaries, or len(orderPaths) if no entry matches.
+
+    Each entry is matched against the path and against progressively shorter
+    suffixes of itself (down to two components), which lets the option-file
+    convention 'resources/Materials/...' match a walk rooted at 'Materials'
+    or deeper, and lets subdirectories inherit their parent entry's order.
+    """
+    norm = '/' + path.replace('\\', '/').strip('/') + '/'
+    for i, p in enumerate(orderPaths):
+        bp = p.replace('\\', '/').strip('/')
+        while '/' in bp:
+            bounded = '/' + bp + '/'
+            if bounded in norm or norm in bounded:
+                return i
+            bp = bp[bp.find('/') + 1:]
+    return len(orderPaths)
+
 def computeDiff(image1Path, image2Path, imageDiffPath):
     try:
         if os.path.exists(imageDiffPath):
@@ -53,12 +92,17 @@ def main(args=None):
     parser.add_argument('-l2', '--lang2', dest='lang2', action='store', help='Second target language for comparison. Default is osl', default="osl")
     parser.add_argument('-l3', '--lang3', dest='lang3', action='store', help='Third target language for comparison. Default is empty', default="")
     parser.add_argument('-e', '--error', dest='error', action='store', help='Filter out results with RMS less than this. Negative means all results are kept.', default=-1, type=float)
+    parser.add_argument('-of', '--order-from', dest='order_from', action='store', help='Path to a MaterialX _options.mtlx file. When provided, output sections are ordered to match its renderTestPaths input.', default="")
 
     args = parser.parse_args(args)
 
     fh = open(args.outputfile,"w+")
     fh.write("<html>\n")
     fh.write("<style>\n")
+    # Preserve the inline background-color on <img> cells when the page is
+    # printed to PDF; without this, browsers strip backgrounds and any
+    # transparent renders disappear into the white page.
+    fh.write("@media print { * { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }")
     fh.write("td {")
     fh.write("    padding: " + str(args.cellpadding) + ";")
     fh.write("    border: " + str(args.tableborder) + "px solid black;")
@@ -102,14 +146,31 @@ def main(args=None):
     if args.inputdir3[-1:] == '/' or args.inputdir3[-1:] == '\\':
         args.inputdir3 = args.inputdir3[:-1]
 
-    # Get all source files
+    # Get all source files. Sort directories in-place so os.walk descent is
+    # deterministic across platforms (NTFS happens to return alphabetical
+    # entries; APFS/ext4 do not).
     langFiles1 = []
     langPaths1 = []
-    for subdir, _, files in os.walk(args.inputdir1):
+    for subdir, dirs, files in os.walk(args.inputdir1):
+        dirs.sort()
         for curFile in sorted(files):
             if curFile.endswith(args.lang1 + ".png"):
                 langFiles1.append(curFile)
                 langPaths1.append(subdir)
+
+    # If an _options.mtlx was supplied via --order-from, re-order the collected
+    # (path, file) pairs so output sections match its renderTestPaths order.
+    # Paths not listed sort to the end alphabetically.
+    if args.order_from:
+        orderPaths = parseRenderTestPaths(args.order_from)
+        if orderPaths:
+            pairs = sorted(
+                zip(langPaths1, langFiles1),
+                key=lambda pf: (orderIndexFor(pf[0], orderPaths),
+                                pf[0].replace('\\', '/'),
+                                pf[1]))
+            langPaths1 = [p for p, _ in pairs]
+            langFiles1 = [f for _, f in pairs]
 
     # Get all destination files, matching source files
     langFiles2 = []
