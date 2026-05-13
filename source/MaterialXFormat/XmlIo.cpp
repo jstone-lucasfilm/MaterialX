@@ -31,6 +31,22 @@ const string XINCLUDE_URL = "http://www.w3.org/2001/XInclude";
 
 using ElementStack = vector<std::pair<ElementPtr, xml_node>>;
 
+// Build the effective AssetResolver for an XML read.  When the caller supplied
+// one via readOptions, it owns resolution outright.  Otherwise we construct a
+// default resolver seeded with the legacy searchPath plus the environment,
+// preserving pre-resolver behavior.
+AssetResolverPtr buildEffectiveResolver(const FileSearchPath& searchPath, const XmlReadOptions* readOptions)
+{
+    if (readOptions && readOptions->assetResolver)
+    {
+        return readOptions->assetResolver;
+    }
+    AssetResolverPtr resolver = std::make_shared<AssetResolver>();
+    resolver->appendSearchPath(searchPath);
+    resolver->appendSearchPath(getEnvironmentPath());
+    return resolver;
+}
+
 void documentToXml(DocumentPtr doc, xml_node& xmlRoot, const XmlWriteOptions* writeOptions)
 {
     ElementStack elemStack;
@@ -200,7 +216,18 @@ void documentFromXml(DocumentPtr doc, const xml_document& xmlDoc, const FileSear
                 DocumentPtr library = createDocument();
                 XmlReadOptions xiReadOptions = readOptions ? *readOptions : XmlReadOptions();
                 xiReadOptions.parentXIncludes.push_back(filename);
-                readXIncludeFunction(library, filename, searchPath, &xiReadOptions);
+
+                // Pre-resolve the XInclude href through the effective resolver,
+                // using the including document's directory as sibling context.
+                // readXIncludeFunction then receives a resolved path; for the
+                // default readFromXmlFile this round-trips harmlessly, and for
+                // custom overrides the original searchPath is still passed
+                // through to honor pre-resolver expectations.
+                AssetResolverPtr xiResolver = buildEffectiveResolver(searchPath, readOptions);
+                FilePath sourceContext = FilePath(doc->getSourceUri()).getParentPath();
+                FilePath xiTarget = xiResolver->resolve(FilePath(filename), sourceContext);
+
+                readXIncludeFunction(library, xiTarget, searchPath, &xiReadOptions);
 
                 // Import the library document.
                 doc->importLibrary(library);
@@ -312,8 +339,13 @@ void readFromXmlStream(DocumentPtr doc, std::istream& stream, FileSearchPath sea
 
 void readFromXmlFile(DocumentPtr doc, FilePath filename, FileSearchPath searchPath, const XmlReadOptions* readOptions)
 {
-    searchPath.append(getEnvironmentPath());
-    filename = searchPath.find(filename);
+    // Resolve the top-level filename through a single resolution chokepoint.
+    // The effective resolver is either caller-supplied or built from the
+    // searchPath + environment, preserving legacy behavior.  On no match the
+    // resolver returns the reference unchanged, so xml_document::load_file
+    // produces the usual file-missing error below.
+    AssetResolverPtr resolver = buildEffectiveResolver(searchPath, readOptions);
+    filename = resolver->resolve(filename);
 
     xml_document xmlDoc;
     xml_parse_result result = xmlDoc.load_file(filename.asString().c_str(), getParseOptions(readOptions));
@@ -325,7 +357,9 @@ void readFromXmlFile(DocumentPtr doc, FilePath filename, FileSearchPath searchPa
                            FilePath(filename);
     doc->setSourceUri(sourcePath);
 
-    // Enable XIncludes that are relative to this document.
+    // Enable XIncludes that are relative to this document.  The parent directory
+    // is prepended to searchPath for back-compat with custom readXIncludeFunction
+    // overrides; resolver-based resolution uses sourceContext instead.
     if (!sourcePath.isAbsolute())
     {
         sourcePath = searchPath.find(sourcePath);

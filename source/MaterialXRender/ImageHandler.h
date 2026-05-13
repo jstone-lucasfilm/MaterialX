@@ -12,6 +12,7 @@
 #include <MaterialXRender/Export.h>
 #include <MaterialXRender/Image.h>
 
+#include <MaterialXFormat/AssetResolver.h>
 #include <MaterialXFormat/File.h>
 
 #include <MaterialXCore/Document.h>
@@ -206,15 +207,30 @@ class MX_RENDER_API ImageHandler
     void unbindImages();
 
     /// Set the search path to be used for finding images on the file system.
+    /// Replaces the search path on the active resolver, preserving the
+    /// resolver identity (and any custom subclass).
     void setSearchPath(const FileSearchPath& path)
     {
-        _searchPath = path;
+        _assetResolver->setSearchPath(path);
     }
 
     /// Return the image search path.
     const FileSearchPath& getSearchPath() const
     {
-        return _searchPath;
+        return getAssetResolver()->getSearchPath();
+    }
+
+    /// Set a caller-supplied AssetResolver to be used for image lookup.
+    /// Passing null resets the handler to a fresh default resolver.
+    void setAssetResolver(AssetResolverPtr resolver)
+    {
+        _assetResolver = resolver ? std::move(resolver) : std::make_shared<AssetResolver>();
+    }
+
+    /// Return the active asset resolver.  Never null.
+    AssetResolverPtr getAssetResolver() const
+    {
+        return _assetResolver;
     }
 
     /// Set the filename resolver for images.
@@ -271,7 +287,7 @@ class MX_RENDER_API ImageHandler
   protected:
     ImageLoaderMap _imageLoaders;
     ImageMap _imageCache;
-    FileSearchPath _searchPath;
+    AssetResolverPtr _assetResolver;
     StringResolverPtr _resolver;
     ImagePtr _zeroImage;
 };

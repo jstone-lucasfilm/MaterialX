@@ -52,7 +52,8 @@ ImagePtr ImageLoader::loadImage(const FilePath&)
 // ImageHandler methods
 //
 
-ImageHandler::ImageHandler(ImageLoaderPtr imageLoader)
+ImageHandler::ImageHandler(ImageLoaderPtr imageLoader) :
+    _assetResolver(std::make_shared<AssetResolver>())
 {
     addLoader(imageLoader);
     _zeroImage = createUniformImage(2, 2, 4, Image::BaseType::UINT8, Color4(0.0f));
@@ -89,7 +90,7 @@ bool ImageHandler::saveImage(const FilePath& filePath,
         return false;
     }
 
-    FilePath foundFilePath = _searchPath.find(filePath);
+    FilePath foundFilePath = getAssetResolver()->resolveForWrite(filePath);
     if (foundFilePath.isEmpty())
     {
         return false;
@@ -132,7 +133,7 @@ ImagePtr ImageHandler::acquireImage(const FilePath& filePath, const Color4& defa
     }
 
     // Load and cache the requested image.
-    ImagePtr image = loadImage(_searchPath.find(resolvedFilePath));
+    ImagePtr image = loadImage(getAssetResolver()->resolve(resolvedFilePath));
     if (image)
     {
         cacheImage(resolvedFilePath, image);
@@ -249,7 +250,7 @@ ImagePtr ImageHandler::getCachedImage(const FilePath& filePath)
     }
     if (!filePath.isAbsolute())
     {
-        for (const FilePath& path : _searchPath)
+        for (const FilePath& path : getAssetResolver()->getSearchPath())
         {
             FilePath combined = path / filePath;
             if (_imageCache.count(combined))

@@ -13,6 +13,7 @@
 
 #include <MaterialXCore/Document.h>
 
+#include <MaterialXFormat/AssetResolver.h>
 #include <MaterialXFormat/Export.h>
 #include <MaterialXFormat/File.h>
 
@@ -56,6 +57,13 @@ class MX_FORMAT_API XmlReadOptions
     /// The vector of parent XIncludes at the scope of the current document.
     /// Defaults to an empty vector.
     StringVec parentXIncludes;
+
+    /// Optional AssetResolver used to locate the document file and any
+    /// XInclude references within it.  When set, this resolver takes
+    /// precedence over the searchPath argument for file resolution.
+    /// When null, the legacy FileSearchPath-based resolution is used.
+    /// Defaults to nullptr.
+    AssetResolverPtr assetResolver;
 };
 
 /// @class XmlWriteOptions

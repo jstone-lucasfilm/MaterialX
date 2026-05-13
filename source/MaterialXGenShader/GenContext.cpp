@@ -13,7 +13,8 @@ MATERIALX_NAMESPACE_BEGIN
 //
 
 GenContext::GenContext(ShaderGeneratorPtr sg) :
-    _sg(sg)
+    _sg(sg),
+    _assetResolver(std::make_shared<AssetResolver>())
 {
     if (!_sg)
     {

@@ -16,6 +16,7 @@
 #include <MaterialXGenShader/ShaderNode.h>
 #include <MaterialXGenShader/ShaderGenerator.h>
 
+#include <MaterialXFormat/AssetResolver.h>
 #include <MaterialXFormat/File.h>
 
 MATERIALX_NAMESPACE_BEGIN
@@ -60,26 +61,34 @@ class MX_GENSHADER_API GenContext
     /// code generation.
     void registerSourceCodeSearchPath(const FilePath& path)
     {
-        _sourceCodeSearchPath.append(path);
+        getAssetResolver()->appendSearchPath(path);
     }
 
     /// Register a user search path for finding source code during
     /// code generation.
     void registerSourceCodeSearchPath(const FileSearchPath& path)
     {
-        _sourceCodeSearchPath.append(path);
+        getAssetResolver()->appendSearchPath(path);
+    }
+
+    /// Set a caller-supplied AssetResolver to be used for source-code lookup.
+    /// Passing null resets the context to a fresh default resolver.
+    void setAssetResolver(AssetResolverPtr resolver)
+    {
+        _assetResolver = resolver ? std::move(resolver) : std::make_shared<AssetResolver>();
+    }
+
+    /// Return the active asset resolver.  Never null.
+    AssetResolverPtr getAssetResolver() const
+    {
+        return _assetResolver;
     }
 
     /// Resolve a source code filename, first checking the given local path
     /// then checking any file paths registered by the user.
     FilePath resolveSourceFile(const FilePath& filename, const FilePath& localPath) const
     {
-        FileSearchPath searchPath = _sourceCodeSearchPath;
-        if (!localPath.isEmpty())
-        {
-            searchPath.prepend(localPath);
-        }
-        return searchPath.find(filename).getNormalized();
+        return getAssetResolver()->resolve(filename, localPath);
     }
 
     /// Add reserved words that should not be used as
@@ -209,7 +218,7 @@ class MX_GENSHADER_API GenContext
 
     ShaderGeneratorPtr _sg;
     GenOptions _options;
-    FileSearchPath _sourceCodeSearchPath;
+    AssetResolverPtr _assetResolver;
     StringSet _reservedWords;
 
     std::unordered_map<string, ShaderNodeImplPtr> _nodeImpls;
