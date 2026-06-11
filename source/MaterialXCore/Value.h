@@ -127,36 +127,36 @@ class MX_CORE_API Value
 template <class T> class TypedValue : public Value
 {
   public:
-    MX_CORE_API TypedValue() :
+    TypedValue() :
         _data{}
     {
     }
-    MX_CORE_API explicit TypedValue(const T& value) :
+    explicit TypedValue(const T& value) :
         _data(value)
     {
     }
-    MX_CORE_API virtual ~TypedValue() { }
+    virtual ~TypedValue() { }
 
     /// Create a deep copy of the value.
-    MX_CORE_API ValuePtr copy() const override
+    ValuePtr copy() const override
     {
         return Value::createValue<T>(_data);
     }
 
     /// Set stored data object.
-    MX_CORE_API void setData(const T& value)
+    void setData(const T& value)
     {
         _data = value;
     }
 
     /// Set stored data object.
-    MX_CORE_API void setData(const TypedValue<T>& value)
+    void setData(const TypedValue<T>& value)
     {
         _data = value._data;
     }
 
     /// Return stored data object.
-    MX_CORE_API const T& getData() const
+    const T& getData() const
     {
         return _data;
     }
@@ -168,7 +168,7 @@ template <class T> class TypedValue : public Value
     MX_CORE_API string getValueString() const override;
 
     // Returns true if value data matches.
-    MX_CORE_API bool isEqual(ConstValuePtr other) const override
+    bool isEqual(ConstValuePtr other) const override
     {
         if (!other || !other->isA<T>())
         {

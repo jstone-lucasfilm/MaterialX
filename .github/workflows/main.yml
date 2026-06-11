@@ -141,6 +141,13 @@ jobs:
           cmake_config: -G "Visual Studio 17 2022" -A "x64" -DMATERIALX_BUILD_SHARED_LIBS=ON
           upload_shaders: ON
 
+        - name: Windows_MinGW_x64_SharedLibs
+          os: windows-2022
+          architecture: x64
+          compiler: mingw
+          python: None
+          cmake_config: -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DMATERIALX_BUILD_SHARED_LIBS=ON -DMATERIALX_BUILD_VIEWER=OFF -DMATERIALX_BUILD_GRAPH_EDITOR=OFF -DMATERIALX_BUILD_PYTHON=OFF
+
     steps:
     - name: Sync Repository
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -180,6 +187,24 @@ jobs:
         Add-Content $env:GITHUB_PATH "$PWD/build/installed/bin"
         # MSVC /MP already parallelizes within each project, so build projects serially.
         Add-Content $env:GITHUB_ENV "CMAKE_BUILD_PARALLEL_LEVEL=1"
+
+    - name: Install MinGW-w64 (Windows)
+      if: matrix.compiler == 'mingw'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: false
+        path-type: inherit
+        install: >-
+          mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-ninja
+
+    - name: Configure MinGW-w64 Environment (Windows)
+      if: matrix.compiler == 'mingw'
+      run: |
+        Add-Content $env:GITHUB_PATH "C:/msys64/mingw64/bin"
+        Add-Content $env:GITHUB_ENV "CC=gcc"
+        Add-Content $env:GITHUB_ENV "CXX=g++"
 
     - name: Install OpenImageIO
       if: env.IS_EXTENDED_BUILD == 'true' && matrix.extended_build_oiio == 'ON' && runner.os == 'Windows'
