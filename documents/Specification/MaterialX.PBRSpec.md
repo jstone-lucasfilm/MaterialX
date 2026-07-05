@@ -1831,7 +1831,7 @@ surfaceshader gltf_pbr(
 }
 ```
 
-The glTF material model also defines an interior volume, parameterized by `thickness`, `attenuation_distance`, and `attenuation_color`. This volume is not part of the definition above: the current data-library graph derives a Beer's law absorption coefficient from `attenuation_distance` and `attenuation_color`, but leaves the resulting volume unconnected and does not yet consume `thickness`. A future revision of the model may implement it by layering the volume under the transmissive base, as the [OpenPBR Surface](#openpbr-surface) model does, gated by `thickness` (which in glTF distinguishes a thin-walled surface, with no interior volume, from a volumetric one). Relatedly, `KHR_materials_transmission` specifies transmission through an infinitely thin surface, without refraction; the composition above instead models refractive transmission through a closed surface, a difference that a future revision may address together with the interior volume.
+The glTF material model also defines an interior volume, parameterized by `thickness`, `attenuation_distance`, and `attenuation_color`. This volume is not part of the definition above: the current data-library graph derives a Beer's law absorption coefficient from `attenuation_distance` and `attenuation_color`, but leaves the resulting volume unconnected and does not yet consume `thickness`. A future revision of the model may implement it by layering the transmission lobe over the interior volume, as the [OpenPBR Surface](#openpbr-surface) model does, gated by `thickness`. Relatedly, `KHR_materials_transmission` specifies transmission through an infinitely thin surface, without refraction; the composition above instead models refractive transmission through a closed surface, a difference that a future revision may address together with the interior volume.
 
 
 <a id="node-open-pbr-surface"> </a>
@@ -1891,7 +1891,7 @@ This definition documents version 1.1.1 of the OpenPBR Surface model, and the as
 
 The specular and coat roughness inputs are remapped by `open_pbr_anisotropy` rather than the standard [&lt;roughness_anisotropy>](#node-roughness-anisotropy) node used by the other models; its definition follows after the model below.
 
-The `transmission_dispersion_scale` and `transmission_dispersion_abbe_number` inputs are part of the interface but are not implemented by this composition, and so are omitted from its function parameters. The interior transmission medium *is* implemented, as an `anisotropic_vdf` whose absorption and scattering are derived from `transmission_color`, `transmission_scatter`, and `transmission_depth` by Beer's law. Unlike the interior volumes of some other models in this section, it is layered under the transmissive base rather than left unconnected.
+The `transmission_dispersion_scale` and `transmission_dispersion_abbe_number` inputs are part of the interface but are not implemented by this composition, and so are omitted from its function parameters. The interior transmission medium is realized as an `anisotropic_vdf` whose absorption and scattering are derived from `transmission_color`, `transmission_scatter`, and `transmission_depth` by Beer's law.
 
 ```
 surfaceshader open_pbr_surface(
