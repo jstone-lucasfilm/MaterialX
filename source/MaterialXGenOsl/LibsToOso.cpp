@@ -371,12 +371,13 @@ int main(int argc, char* const argv[])
     // Register types from the libraries on the OSL shader generator.
     oslShaderGen->registerTypeDefs(librariesDoc);
 
-    // Setup the context of the OSL shader generator.
+    // Setup the context of the OSL shader generator. File texture lookups are
+    // generated with a vertical flip, matching the reference OSL shaders and
+    // compensating for the top-left image origin of OSL texture lookups.
     mx::GenContext context(oslShaderGen);
     context.registerSourceCodeSearchPath(argSearchPath);
-    // TODO: It might be good to find a way to not hardcode these options, especially the texture flip.
     context.getOptions().addUpstreamDependencies = false;
-    context.getOptions().fileTextureVerticalFlip = false;
+    context.getOptions().fileTextureVerticalFlip = true;
     context.getOptions().oslImplicitSurfaceShaderConversion = false;
 
     OslCompileOptions options;
