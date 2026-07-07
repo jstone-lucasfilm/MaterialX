@@ -1893,6 +1893,8 @@ The specular and coat roughness inputs are remapped by `open_pbr_anisotropy` rat
 
 The `transmission_dispersion_scale` and `transmission_dispersion_abbe_number` inputs are part of the interface but are not implemented by this composition, and so are omitted from its function parameters. The interior transmission medium is realized as an `anisotropic_vdf` whose absorption and scattering are derived from `transmission_color`, `transmission_scatter`, and `transmission_depth` by Beer's law.
 
+In the originating specification, `specular_color` modulates the dielectric Fresnel factor only for light incident from outside the surface, and when `transmission_depth` is zero, `transmission_color` tints only the refraction through the interface, so that internal reflection within a transmissive dielectric receives neither tint. The `tint` input of [&lt;dielectric_bsdf>](#node-dielectric-bsdf) does not distinguish which side of the interface light arrives from, so this composition departs from that prescription: internal reflections are tinted by `specular_color` in the same manner as exterior reflections, a difference visible in transmissive materials whose `specular_color` is not white.
+
 ```
 surfaceshader open_pbr_surface(
     float base_weight,
