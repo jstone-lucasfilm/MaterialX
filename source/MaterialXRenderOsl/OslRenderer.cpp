@@ -118,7 +118,8 @@ void OslRenderer::renderOSL(const FilePath& dirPath, const string& shaderName, c
 
     StringMap replacementMap;
     replacementMap[OUTPUT_SHADER_TYPE_STRING] = outputShader;
-    // POSIX-style separators keep the geometry path valid in scene XML on all platforms.
+    // Format the geometry path with POSIX-style separators, which testrender
+    // supports on all platforms, including Windows.
     replacementMap[RENDER_GEOMETRY_STRING] = _renderGeometry.asString(FilePath::FormatPosix);
     replacementMap[OUTPUT_SHADER_INPUT_STRING] = OUTPUT_SHADER_INPUT_VALUE_STRING;
     replacementMap[INPUT_SHADER_TYPE_STRING] = shaderName;
@@ -256,7 +257,8 @@ void OslRenderer::renderOSLNetwork(const FilePath& dirPath, const string& shader
     const string RENDER_GEOMETRY_STRING("%render_geometry%");
 
     StringMap replacementMap;
-    // POSIX-style separators keep the geometry path valid in scene XML on all platforms.
+    // Format the geometry path with POSIX-style separators, which testrender
+    // supports on all platforms, including Windows.
     replacementMap[RENDER_GEOMETRY_STRING] = _renderGeometry.asString(FilePath::FormatPosix);
 
     string envOverrideString;

@@ -172,11 +172,12 @@ RenderUtil::RenderProfileResult MdlShaderRenderTester::runRenderer(
                 command += " --camera 0 0 3 0 0 0";
                 command += " --fov 45";
 
-                // Halve the U range of the built-in sphere, whose texture
-                // coordinates span (0, 0) to (2, 1), aligning it with the
-                // sphere geometry used by other renderers in the test suite.
-                // The default V orientation of the renderer matches the
-                // MaterialX convention, with the origin at the lower left.
+                // Since no scene geometry is specified, df_vulkan renders its
+                // built-in sphere, whose texture coordinates span (0, 0) to
+                // (2, 1).  Halve its U range to align it with the sphere
+                // geometry used by other renderers in the test suite.  The
+                // default V orientation of df_vulkan matches the MaterialX
+                // convention, with the origin at the lower left.
                 command += " --uv_scale 0.5 1 --uv_repeat";
 
                 // Application setup
