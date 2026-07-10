@@ -178,7 +178,7 @@ RenderUtil::RenderProfileResult MdlShaderRenderTester::runRenderer(
                 // geometry used by other renderers in the test suite.  The
                 // default V orientation of df_vulkan matches the MaterialX
                 // convention, with the origin at the lower left.
-                command += " --uv_scale 0.5 1 --uv_repeat";
+                command += " --uv_scale 0.5 1";
 
                 // Application setup
                 command += " --noaux";
