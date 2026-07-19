@@ -1,0 +1,874 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="lin_rec709">
+  <nodedef name="ND_mxlogo_halfplane_float" node="mxlogo_halfplane" nodegroup="procedural2d">
+    <output name="out" type="float" />
+    <input name="uv" type="vector2" />
+    <input name="a" type="vector2" />
+    <input name="b" type="vector2" />
+    <input name="radius" type="float" value="0" />
+    <input name="softness" type="float" value="0.0008" />
+  </nodedef>
+  <nodegraph name="NG_mxlogo_halfplane_float" nodedef="ND_mxlogo_halfplane_float">
+    <subtract name="edge" type="vector2">
+      <input name="in1" type="vector2" interfacename="b" />
+      <input name="in2" type="vector2" interfacename="a" />
+    </subtract>
+    <separate2 name="esep" type="multioutput">
+      <input name="in" type="vector2" nodename="edge" />
+    </separate2>
+    <multiply name="negy" type="float">
+      <input name="in1" type="float" nodename="esep" output="outy" />
+      <input name="in2" type="float" value="-1" />
+    </multiply>
+    <combine2 name="normal" type="vector2">
+      <input name="in1" type="float" nodename="negy" />
+      <input name="in2" type="float" nodename="esep" output="outx" />
+    </combine2>
+    <normalize name="nnorm" type="vector2">
+      <input name="in" type="vector2" nodename="normal" />
+    </normalize>
+    <subtract name="rel" type="vector2">
+      <input name="in1" type="vector2" interfacename="uv" />
+      <input name="in2" type="vector2" interfacename="a" />
+    </subtract>
+    <dotproduct name="sdist" type="float">
+      <input name="in1" type="vector2" nodename="rel" />
+      <input name="in2" type="vector2" nodename="nnorm" />
+    </dotproduct>
+    <add name="soff" type="float">
+      <input name="in1" type="float" nodename="sdist" />
+      <input name="in2" type="float" interfacename="radius" />
+    </add>
+    <multiply name="nsoft" type="float">
+      <input name="in1" type="float" interfacename="softness" />
+      <input name="in2" type="float" value="-1" />
+    </multiply>
+    <smoothstep name="cov" type="float">
+      <input name="in" type="float" nodename="soff" />
+      <input name="low" type="float" nodename="nsoft" />
+      <input name="high" type="float" interfacename="softness" />
+    </smoothstep>
+    <output name="out" type="float" nodename="cov" />
+  </nodegraph>
+  <nodedef name="ND_mxlogo_tri_float" node="mxlogo_tri" nodegroup="procedural2d">
+    <output name="out" type="float" />
+    <input name="uv" type="vector2" />
+    <input name="a" type="vector2" />
+    <input name="b" type="vector2" />
+    <input name="c" type="vector2" />
+    <input name="radius" type="float" value="0" />
+    <input name="softness" type="float" value="0.0008" />
+  </nodedef>
+  <nodegraph name="NG_mxlogo_tri_float" nodedef="ND_mxlogo_tri_float">
+    <mxlogo_halfplane name="hp0" type="float">
+      <input name="uv" type="vector2" interfacename="uv" />
+      <input name="a" type="vector2" interfacename="a" />
+      <input name="b" type="vector2" interfacename="b" />
+      <input name="radius" type="float" interfacename="radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_halfplane>
+    <mxlogo_halfplane name="hp1" type="float">
+      <input name="uv" type="vector2" interfacename="uv" />
+      <input name="a" type="vector2" interfacename="b" />
+      <input name="b" type="vector2" interfacename="c" />
+      <input name="radius" type="float" interfacename="radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_halfplane>
+    <mxlogo_halfplane name="hp2" type="float">
+      <input name="uv" type="vector2" interfacename="uv" />
+      <input name="a" type="vector2" interfacename="c" />
+      <input name="b" type="vector2" interfacename="a" />
+      <input name="radius" type="float" interfacename="radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_halfplane>
+    <min name="isect1" type="float">
+      <input name="in1" type="float" nodename="hp0" />
+      <input name="in2" type="float" nodename="hp1" />
+    </min>
+    <min name="isect2" type="float">
+      <input name="in1" type="float" nodename="isect1" />
+      <input name="in2" type="float" nodename="hp2" />
+    </min>
+    <output name="out" type="float" nodename="isect2" />
+  </nodegraph>
+  <nodedef name="ND_mxlogo_quad_float" node="mxlogo_quad" nodegroup="procedural2d">
+    <output name="out" type="float" />
+    <input name="uv" type="vector2" />
+    <input name="a" type="vector2" />
+    <input name="b" type="vector2" />
+    <input name="c" type="vector2" />
+    <input name="d" type="vector2" />
+    <input name="radius" type="float" value="0" />
+    <input name="softness" type="float" value="0.0008" />
+  </nodedef>
+  <nodegraph name="NG_mxlogo_quad_float" nodedef="ND_mxlogo_quad_float">
+    <mxlogo_halfplane name="hp0" type="float">
+      <input name="uv" type="vector2" interfacename="uv" />
+      <input name="a" type="vector2" interfacename="a" />
+      <input name="b" type="vector2" interfacename="b" />
+      <input name="radius" type="float" interfacename="radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_halfplane>
+    <mxlogo_halfplane name="hp1" type="float">
+      <input name="uv" type="vector2" interfacename="uv" />
+      <input name="a" type="vector2" interfacename="b" />
+      <input name="b" type="vector2" interfacename="c" />
+      <input name="radius" type="float" interfacename="radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_halfplane>
+    <mxlogo_halfplane name="hp2" type="float">
+      <input name="uv" type="vector2" interfacename="uv" />
+      <input name="a" type="vector2" interfacename="c" />
+      <input name="b" type="vector2" interfacename="d" />
+      <input name="radius" type="float" interfacename="radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_halfplane>
+    <mxlogo_halfplane name="hp3" type="float">
+      <input name="uv" type="vector2" interfacename="uv" />
+      <input name="a" type="vector2" interfacename="d" />
+      <input name="b" type="vector2" interfacename="a" />
+      <input name="radius" type="float" interfacename="radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_halfplane>
+    <min name="isect1" type="float">
+      <input name="in1" type="float" nodename="hp0" />
+      <input name="in2" type="float" nodename="hp1" />
+    </min>
+    <min name="isect2" type="float">
+      <input name="in1" type="float" nodename="isect1" />
+      <input name="in2" type="float" nodename="hp2" />
+    </min>
+    <min name="isect3" type="float">
+      <input name="in1" type="float" nodename="isect2" />
+      <input name="in2" type="float" nodename="hp3" />
+    </min>
+    <output name="out" type="float" nodename="isect3" />
+  </nodegraph>
+  <nodedef name="ND_mxlogo_stroke_float" node="mxlogo_stroke" nodegroup="procedural2d">
+    <output name="out" type="float" />
+    <input name="uv" type="vector2" />
+    <input name="a" type="vector2" />
+    <input name="b" type="vector2" />
+    <input name="radius" type="float" value="0.002" />
+    <input name="softness" type="float" value="0.0008" />
+  </nodedef>
+  <nodegraph name="NG_mxlogo_stroke_float" nodedef="ND_mxlogo_stroke_float">
+    <subtract name="edge" type="vector2">
+      <input name="in1" type="vector2" interfacename="b" />
+      <input name="in2" type="vector2" interfacename="a" />
+    </subtract>
+    <subtract name="rel" type="vector2">
+      <input name="in1" type="vector2" interfacename="uv" />
+      <input name="in2" type="vector2" interfacename="a" />
+    </subtract>
+    <dotproduct name="wdote" type="float">
+      <input name="in1" type="vector2" nodename="rel" />
+      <input name="in2" type="vector2" nodename="edge" />
+    </dotproduct>
+    <dotproduct name="edote" type="float">
+      <input name="in1" type="vector2" nodename="edge" />
+      <input name="in2" type="vector2" nodename="edge" />
+    </dotproduct>
+    <divide name="traw" type="float">
+      <input name="in1" type="float" nodename="wdote" />
+      <input name="in2" type="float" nodename="edote" />
+    </divide>
+    <clamp name="tclamp" type="float">
+      <input name="in" type="float" nodename="traw" />
+    </clamp>
+    <multiply name="eoff" type="vector2">
+      <input name="in1" type="vector2" nodename="edge" />
+      <input name="in2" type="float" nodename="tclamp" />
+    </multiply>
+    <add name="proj" type="vector2">
+      <input name="in1" type="vector2" interfacename="a" />
+      <input name="in2" type="vector2" nodename="eoff" />
+    </add>
+    <subtract name="dvec" type="vector2">
+      <input name="in1" type="vector2" interfacename="uv" />
+      <input name="in2" type="vector2" nodename="proj" />
+    </subtract>
+    <magnitude name="dist" type="float">
+      <input name="in" type="vector2" nodename="dvec" />
+    </magnitude>
+    <subtract name="rlo" type="float">
+      <input name="in1" type="float" interfacename="radius" />
+      <input name="in2" type="float" interfacename="softness" />
+    </subtract>
+    <add name="rhi" type="float">
+      <input name="in1" type="float" interfacename="radius" />
+      <input name="in2" type="float" interfacename="softness" />
+    </add>
+    <smoothstep name="falloff" type="float">
+      <input name="in" type="float" nodename="dist" />
+      <input name="low" type="float" nodename="rlo" />
+      <input name="high" type="float" nodename="rhi" />
+    </smoothstep>
+    <subtract name="cov" type="float">
+      <input name="in1" type="float" value="1" />
+      <input name="in2" type="float" nodename="falloff" />
+    </subtract>
+    <output name="out" type="float" nodename="cov" />
+  </nodegraph>
+  <nodedef name="ND_mxlogo_lineargrad_float" node="mxlogo_lineargrad" nodegroup="procedural2d">
+    <output name="out" type="float" />
+    <input name="uv" type="vector2" />
+    <input name="a" type="vector2" />
+    <input name="b" type="vector2" />
+  </nodedef>
+  <nodegraph name="NG_mxlogo_lineargrad_float" nodedef="ND_mxlogo_lineargrad_float">
+    <subtract name="axis" type="vector2">
+      <input name="in1" type="vector2" interfacename="b" />
+      <input name="in2" type="vector2" interfacename="a" />
+    </subtract>
+    <subtract name="rel" type="vector2">
+      <input name="in1" type="vector2" interfacename="uv" />
+      <input name="in2" type="vector2" interfacename="a" />
+    </subtract>
+    <dotproduct name="wdote" type="float">
+      <input name="in1" type="vector2" nodename="rel" />
+      <input name="in2" type="vector2" nodename="axis" />
+    </dotproduct>
+    <dotproduct name="edote" type="float">
+      <input name="in1" type="vector2" nodename="axis" />
+      <input name="in2" type="vector2" nodename="axis" />
+    </dotproduct>
+    <divide name="traw" type="float">
+      <input name="in1" type="float" nodename="wdote" />
+      <input name="in2" type="float" nodename="edote" />
+    </divide>
+    <clamp name="tclamp" type="float">
+      <input name="in" type="float" nodename="traw" />
+    </clamp>
+    <output name="out" type="float" nodename="tclamp" />
+  </nodegraph>
+  <nodedef name="ND_materialx_logo_color4" node="materialx_logo" nodegroup="procedural2d" doc="Procedural rendition of the MaterialX logo glyph. Output is unpremultiplied RGBA; alpha is glyph coverage.">
+    <output name="out" type="color4" />
+    <input name="texcoord" type="vector2" defaultgeomprop="UV0" />
+    <input name="center" type="vector2" value="0.5, 0.5" />
+    <input name="size" type="float" value="0.9" />
+    <input name="softness" type="float" value="0.0008" />
+    <input name="linewidth" type="float" value="0.0028" />
+  </nodedef>
+  <nodegraph name="NG_materialx_logo_color4" nodedef="ND_materialx_logo_color4">
+    <subtract name="centered" type="vector2">
+      <input name="in1" type="vector2" interfacename="texcoord" />
+      <input name="in2" type="vector2" interfacename="center" />
+    </subtract>
+    <divide name="p" type="vector2">
+      <input name="in1" type="vector2" nodename="centered" />
+      <input name="in2" type="float" interfacename="size" />
+    </divide>
+    <multiply name="line_radius" type="float">
+      <input name="in1" type="float" interfacename="linewidth" />
+      <input name="in2" type="float" value="0.5" />
+    </multiply>
+    <mxlogo_quad name="mask_slash" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="softness" type="float" interfacename="softness" />
+      <input name="a" type="vector2" value="-0.333333, -0.288675" />
+      <input name="b" type="vector2" value="0.333333, 0.096225" />
+      <input name="c" type="vector2" value="0.333333, 0.288675" />
+      <input name="d" type="vector2" value="-0.333333, -0.096225" />
+    </mxlogo_quad>
+    <mxlogo_quad name="mask_bandu" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="softness" type="float" interfacename="softness" />
+      <input name="a" type="vector2" value="0, -0.096225" />
+      <input name="b" type="vector2" value="0.166667, 0" />
+      <input name="c" type="vector2" value="0, 0.096225" />
+      <input name="d" type="vector2" value="-0.166667, 0" />
+    </mxlogo_quad>
+    <mxlogo_quad name="mask_bandl" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="softness" type="float" interfacename="softness" />
+      <input name="a" type="vector2" value="0.166667, -0.19245" />
+      <input name="b" type="vector2" value="0.333333, -0.096225" />
+      <input name="c" type="vector2" value="0.166667, 0" />
+      <input name="d" type="vector2" value="0, -0.096225" />
+    </mxlogo_quad>
+    <mxlogo_tri name="mask_smalltri" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="softness" type="float" interfacename="softness" />
+      <input name="a" type="vector2" value="0.166667, -0.19245" />
+      <input name="b" type="vector2" value="0.333333, -0.288675" />
+      <input name="c" type="vector2" value="0.333333, -0.096225" />
+    </mxlogo_tri>
+    <mxlogo_quad name="mask_cube" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="softness" type="float" interfacename="softness" />
+      <input name="a" type="vector2" value="0.333333, -0.288675" />
+      <input name="b" type="vector2" value="0.5, -0.19245" />
+      <input name="c" type="vector2" value="0.5, 0.19245" />
+      <input name="d" type="vector2" value="0.333333, 0.288675" />
+    </mxlogo_quad>
+    <mxlogo_quad name="mask_pink1" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="softness" type="float" interfacename="softness" />
+      <input name="a" type="vector2" value="-0.5, 0.19245" />
+      <input name="b" type="vector2" value="-0.5, -0.19245" />
+      <input name="c" type="vector2" value="-0.333333, -0.288675" />
+      <input name="d" type="vector2" value="-0.333333, 0.288675" />
+    </mxlogo_quad>
+    <mxlogo_quad name="mask_pink2" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="softness" type="float" interfacename="softness" />
+      <input name="a" type="vector2" value="-0.333333, 0.096225" />
+      <input name="b" type="vector2" value="-0.166667, 0" />
+      <input name="c" type="vector2" value="0, 0.096225" />
+      <input name="d" type="vector2" value="-0.333333, 0.288675" />
+    </mxlogo_quad>
+    <constant name="c_pink" type="color3">
+      <input name="value" type="color3" value="0.839216, 0.258824, 0.454902" colorspace="srgb_texture" />
+    </constant>
+    <constant name="c_dpink" type="color3">
+      <input name="value" type="color3" value="0.741176, 0.160784, 0.356863" colorspace="srgb_texture" />
+    </constant>
+    <constant name="c_slash_mid" type="color3">
+      <input name="value" type="color3" value="0.0431373, 0.470588, 0.556863" colorspace="srgb_texture" />
+    </constant>
+    <constant name="c_slash_end" type="color3">
+      <input name="value" type="color3" value="0.0196078, 0.364706, 0.423529" colorspace="srgb_texture" />
+    </constant>
+    <constant name="c_bandu" type="color3">
+      <input name="value" type="color3" value="0.25098, 0.380392, 0.521569" colorspace="srgb_texture" />
+    </constant>
+    <constant name="c_bandl_a" type="color3">
+      <input name="value" type="color3" value="0.196078, 0.380392, 0.513726" colorspace="srgb_texture" />
+    </constant>
+    <constant name="c_bandl_b" type="color3">
+      <input name="value" type="color3" value="0.145098, 0.435294, 0.537255" colorspace="srgb_texture" />
+    </constant>
+    <constant name="c_smalltri" type="color3">
+      <input name="value" type="color3" value="0.0431373, 0.478431, 0.564706" colorspace="srgb_texture" />
+    </constant>
+    <constant name="c_cube_bot" type="color3">
+      <input name="value" type="color3" value="0, 0.407843, 0.478431" colorspace="srgb_texture" />
+    </constant>
+    <constant name="c_cube_top" type="color3">
+      <input name="value" type="color3" value="0.0862745, 0.698039, 0.803922" colorspace="srgb_texture" />
+    </constant>
+    <constant name="c_cube_hl" type="color3">
+      <input name="value" type="color3" value="0.521569, 0.827451, 0.890196" colorspace="srgb_texture" />
+    </constant>
+    <constant name="c_seam_pink" type="color3">
+      <input name="value" type="color3" value="1, 0.8, 0.8" colorspace="srgb_texture" />
+    </constant>
+    <constant name="c_seam_cyan" type="color3">
+      <input name="value" type="color3" value="0.701961, 0.878431, 0.87451" colorspace="srgb_texture" />
+    </constant>
+    <mxlogo_lineargrad name="slash_t" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="-0.333333, -0.19245" />
+      <input name="b" type="vector2" value="0.333333, 0.19245" />
+    </mxlogo_lineargrad>
+    <multiply name="slash_t2" type="float">
+      <input name="in1" type="float" nodename="slash_t" />
+      <input name="in2" type="float" value="2" />
+    </multiply>
+    <subtract name="slash_tc" type="float">
+      <input name="in1" type="float" nodename="slash_t2" />
+      <input name="in2" type="float" value="1" />
+    </subtract>
+    <absval name="slash_ta" type="float">
+      <input name="in" type="float" nodename="slash_tc" />
+    </absval>
+    <multiply name="slash_tg" type="float">
+      <input name="in1" type="float" nodename="slash_ta" />
+      <input name="in2" type="float" value="1.568" />
+    </multiply>
+    <subtract name="slash_ts" type="float">
+      <input name="in1" type="float" nodename="slash_tg" />
+      <input name="in2" type="float" value="0.568" />
+    </subtract>
+    <clamp name="slash_td" type="float">
+      <input name="in" type="float" nodename="slash_ts" />
+    </clamp>
+    <mix name="col_slash" type="color3">
+      <input name="fg" type="color3" nodename="c_slash_end" />
+      <input name="bg" type="color3" nodename="c_slash_mid" />
+      <input name="mix" type="float" nodename="slash_td" />
+    </mix>
+    <mxlogo_lineargrad name="bandl_t" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="0.0833333, -0.0481125" />
+      <input name="b" type="vector2" value="0.25, -0.144338" />
+    </mxlogo_lineargrad>
+    <mix name="col_bandl" type="color3">
+      <input name="fg" type="color3" nodename="c_bandl_b" />
+      <input name="bg" type="color3" nodename="c_bandl_a" />
+      <input name="mix" type="float" nodename="bandl_t" />
+    </mix>
+    <mxlogo_lineargrad name="cube_t" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="-0.028621, -0.0696486" />
+      <input name="b" type="vector2" value="0.110797, 0.269622" />
+    </mxlogo_lineargrad>
+    <mix name="col_cubebase" type="color3">
+      <input name="fg" type="color3" nodename="c_cube_top" />
+      <input name="bg" type="color3" nodename="c_cube_bot" />
+      <input name="mix" type="float" nodename="cube_t" />
+    </mix>
+    <subtract name="cube_hvec" type="vector2">
+      <input name="in1" type="vector2" nodename="p" />
+      <input name="in2" type="vector2" value="0.4866, 0.1525" />
+    </subtract>
+    <rotate2d name="cube_hrot" type="vector2">
+      <input name="in" type="vector2" nodename="cube_hvec" />
+      <input name="amount" type="float" value="-30.42" />
+    </rotate2d>
+    <multiply name="cube_hscale" type="vector2">
+      <input name="in1" type="vector2" nodename="cube_hrot" />
+      <input name="in2" type="vector2" value="0.844238, 14.5138" />
+    </multiply>
+    <magnitude name="cube_hdist" type="float">
+      <input name="in" type="vector2" nodename="cube_hscale" />
+    </magnitude>
+    <smoothstep name="cube_hss" type="float">
+      <input name="in" type="float" nodename="cube_hdist" />
+      <input name="low" type="float" value="0" />
+      <input name="high" type="float" value="1" />
+    </smoothstep>
+    <subtract name="cube_hmask" type="float">
+      <input name="in1" type="float" value="1" />
+      <input name="in2" type="float" nodename="cube_hss" />
+    </subtract>
+    <mix name="col_cube" type="color3">
+      <input name="fg" type="color3" nodename="c_cube_hl" />
+      <input name="bg" type="color3" nodename="col_cubebase" />
+      <input name="mix" type="float" nodename="cube_hmask" />
+    </mix>
+    <constant name="c_black" type="color3">
+      <input name="value" type="color3" value="0, 0, 0" />
+    </constant>
+    <mix name="paint_slash" type="color3">
+      <input name="fg" type="color3" nodename="col_slash" />
+      <input name="bg" type="color3" nodename="c_black" />
+      <input name="mix" type="float" nodename="mask_slash" />
+    </mix>
+    <mix name="paint_bandu" type="color3">
+      <input name="fg" type="color3" nodename="c_bandu" />
+      <input name="bg" type="color3" nodename="paint_slash" />
+      <input name="mix" type="float" nodename="mask_bandu" />
+    </mix>
+    <mix name="paint_bandl" type="color3">
+      <input name="fg" type="color3" nodename="col_bandl" />
+      <input name="bg" type="color3" nodename="paint_bandu" />
+      <input name="mix" type="float" nodename="mask_bandl" />
+    </mix>
+    <mix name="paint_smalltri" type="color3">
+      <input name="fg" type="color3" nodename="c_smalltri" />
+      <input name="bg" type="color3" nodename="paint_bandl" />
+      <input name="mix" type="float" nodename="mask_smalltri" />
+    </mix>
+    <mix name="paint_cube" type="color3">
+      <input name="fg" type="color3" nodename="col_cube" />
+      <input name="bg" type="color3" nodename="paint_smalltri" />
+      <input name="mix" type="float" nodename="mask_cube" />
+    </mix>
+    <mix name="paint_pink1" type="color3">
+      <input name="fg" type="color3" nodename="c_pink" />
+      <input name="bg" type="color3" nodename="paint_cube" />
+      <input name="mix" type="float" nodename="mask_pink1" />
+    </mix>
+    <mix name="paint_pink2" type="color3">
+      <input name="fg" type="color3" nodename="c_dpink" />
+      <input name="bg" type="color3" nodename="paint_pink1" />
+      <input name="mix" type="float" nodename="mask_pink2" />
+    </mix>
+    <mxlogo_stroke name="seam_c0" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="-0.333333, -0.096225" />
+      <input name="b" type="vector2" value="0.333333, 0.288675" />
+      <input name="radius" type="float" nodename="line_radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_stroke>
+    <mix name="paint_seam_c0" type="color3">
+      <input name="fg" type="color3" nodename="c_seam_cyan" />
+      <input name="bg" type="color3" nodename="paint_pink2" />
+      <input name="mix" type="float" nodename="seam_c0" />
+    </mix>
+    <mxlogo_stroke name="seam_c1" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="-0.333333, -0.288675" />
+      <input name="b" type="vector2" value="0.333333, 0.096225" />
+      <input name="radius" type="float" nodename="line_radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_stroke>
+    <mix name="paint_seam_c1" type="color3">
+      <input name="fg" type="color3" nodename="c_seam_cyan" />
+      <input name="bg" type="color3" nodename="paint_seam_c0" />
+      <input name="mix" type="float" nodename="seam_c1" />
+    </mix>
+    <mxlogo_stroke name="seam_c2" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="0.333333, 0.288675" />
+      <input name="b" type="vector2" value="0.333333, -0.288675" />
+      <input name="radius" type="float" nodename="line_radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_stroke>
+    <mix name="paint_seam_c2" type="color3">
+      <input name="fg" type="color3" nodename="c_seam_cyan" />
+      <input name="bg" type="color3" nodename="paint_seam_c1" />
+      <input name="mix" type="float" nodename="seam_c2" />
+    </mix>
+    <mxlogo_stroke name="seam_c3" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="-0.166667, 0" />
+      <input name="b" type="vector2" value="0, 0.096225" />
+      <input name="radius" type="float" nodename="line_radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_stroke>
+    <mix name="paint_seam_c3" type="color3">
+      <input name="fg" type="color3" nodename="c_seam_cyan" />
+      <input name="bg" type="color3" nodename="paint_seam_c2" />
+      <input name="mix" type="float" nodename="seam_c3" />
+    </mix>
+    <mxlogo_stroke name="seam_c4" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="0, -0.096225" />
+      <input name="b" type="vector2" value="0.333333, -0.288675" />
+      <input name="radius" type="float" nodename="line_radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_stroke>
+    <mix name="paint_seam_c4" type="color3">
+      <input name="fg" type="color3" nodename="c_seam_cyan" />
+      <input name="bg" type="color3" nodename="paint_seam_c3" />
+      <input name="mix" type="float" nodename="seam_c4" />
+    </mix>
+    <mxlogo_stroke name="seam_c5" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="0.166667, 0" />
+      <input name="b" type="vector2" value="0.333333, -0.096225" />
+      <input name="radius" type="float" nodename="line_radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_stroke>
+    <mix name="paint_seam_c5" type="color3">
+      <input name="fg" type="color3" nodename="c_seam_cyan" />
+      <input name="bg" type="color3" nodename="paint_seam_c4" />
+      <input name="mix" type="float" nodename="seam_c5" />
+    </mix>
+    <mxlogo_stroke name="seam_c6" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="0.5, 0.19245" />
+      <input name="b" type="vector2" value="0.5, -0.19245" />
+      <input name="radius" type="float" nodename="line_radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_stroke>
+    <mix name="paint_seam_c6" type="color3">
+      <input name="fg" type="color3" nodename="c_seam_cyan" />
+      <input name="bg" type="color3" nodename="paint_seam_c5" />
+      <input name="mix" type="float" nodename="seam_c6" />
+    </mix>
+    <mxlogo_stroke name="seam_c7" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="0.333333, 0.288675" />
+      <input name="b" type="vector2" value="0.5, 0.19245" />
+      <input name="radius" type="float" nodename="line_radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_stroke>
+    <mix name="paint_seam_c7" type="color3">
+      <input name="fg" type="color3" nodename="c_seam_cyan" />
+      <input name="bg" type="color3" nodename="paint_seam_c6" />
+      <input name="mix" type="float" nodename="seam_c7" />
+    </mix>
+    <mxlogo_stroke name="seam_c8" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="0.333333, -0.288675" />
+      <input name="b" type="vector2" value="0.5, -0.19245" />
+      <input name="radius" type="float" nodename="line_radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_stroke>
+    <mix name="paint_seam_c8" type="color3">
+      <input name="fg" type="color3" nodename="c_seam_cyan" />
+      <input name="bg" type="color3" nodename="paint_seam_c7" />
+      <input name="mix" type="float" nodename="seam_c8" />
+    </mix>
+    <mxlogo_stroke name="seam_p0" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="-0.5, 0.19245" />
+      <input name="b" type="vector2" value="-0.333333, 0.288675" />
+      <input name="radius" type="float" nodename="line_radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_stroke>
+    <mix name="paint_seam_p0" type="color3">
+      <input name="fg" type="color3" nodename="c_seam_pink" />
+      <input name="bg" type="color3" nodename="paint_seam_c8" />
+      <input name="mix" type="float" nodename="seam_p0" />
+    </mix>
+    <mxlogo_stroke name="seam_p1" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="-0.5, 0.19245" />
+      <input name="b" type="vector2" value="-0.5, -0.19245" />
+      <input name="radius" type="float" nodename="line_radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_stroke>
+    <mix name="paint_seam_p1" type="color3">
+      <input name="fg" type="color3" nodename="c_seam_pink" />
+      <input name="bg" type="color3" nodename="paint_seam_p0" />
+      <input name="mix" type="float" nodename="seam_p1" />
+    </mix>
+    <mxlogo_stroke name="seam_p2" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="-0.5, -0.19245" />
+      <input name="b" type="vector2" value="-0.333333, -0.288675" />
+      <input name="radius" type="float" nodename="line_radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_stroke>
+    <mix name="paint_seam_p2" type="color3">
+      <input name="fg" type="color3" nodename="c_seam_pink" />
+      <input name="bg" type="color3" nodename="paint_seam_p1" />
+      <input name="mix" type="float" nodename="seam_p2" />
+    </mix>
+    <mxlogo_stroke name="seam_p3" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="-0.333333, 0.288675" />
+      <input name="b" type="vector2" value="-0.333333, -0.288675" />
+      <input name="radius" type="float" nodename="line_radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_stroke>
+    <mix name="paint_seam_p3" type="color3">
+      <input name="fg" type="color3" nodename="c_seam_pink" />
+      <input name="bg" type="color3" nodename="paint_seam_p2" />
+      <input name="mix" type="float" nodename="seam_p3" />
+    </mix>
+    <mxlogo_stroke name="seam_p4" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="-0.333333, 0.288675" />
+      <input name="b" type="vector2" value="0, 0.096225" />
+      <input name="radius" type="float" nodename="line_radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_stroke>
+    <mix name="paint_seam_p4" type="color3">
+      <input name="fg" type="color3" nodename="c_seam_pink" />
+      <input name="bg" type="color3" nodename="paint_seam_p3" />
+      <input name="mix" type="float" nodename="seam_p4" />
+    </mix>
+    <mxlogo_stroke name="seam_p5" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="-0.333333, 0.096225" />
+      <input name="b" type="vector2" value="-0.166667, 0" />
+      <input name="radius" type="float" nodename="line_radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_stroke>
+    <mix name="paint_seam_p5" type="color3">
+      <input name="fg" type="color3" nodename="c_seam_pink" />
+      <input name="bg" type="color3" nodename="paint_seam_p4" />
+      <input name="mix" type="float" nodename="seam_p5" />
+    </mix>
+    <mxlogo_stroke name="seam_p6" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="-0.5, 0.19245" />
+      <input name="b" type="vector2" value="-0.333333, 0.096225" />
+      <input name="radius" type="float" nodename="line_radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_stroke>
+    <mix name="paint_seam_p6" type="color3">
+      <input name="fg" type="color3" nodename="c_seam_pink" />
+      <input name="bg" type="color3" nodename="paint_seam_p5" />
+      <input name="mix" type="float" nodename="seam_p6" />
+    </mix>
+    <mxlogo_stroke name="seam_p7" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="-0.333333, 0.096225" />
+      <input name="b" type="vector2" value="-0.5, 0" />
+      <input name="radius" type="float" nodename="line_radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_stroke>
+    <mix name="paint_seam_p7" type="color3">
+      <input name="fg" type="color3" nodename="c_seam_pink" />
+      <input name="bg" type="color3" nodename="paint_seam_p6" />
+      <input name="mix" type="float" nodename="seam_p7" />
+    </mix>
+    <mxlogo_stroke name="seam_p8" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="-0.5, 0" />
+      <input name="b" type="vector2" value="-0.333333, -0.096225" />
+      <input name="radius" type="float" nodename="line_radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_stroke>
+    <mix name="paint_seam_p8" type="color3">
+      <input name="fg" type="color3" nodename="c_seam_pink" />
+      <input name="bg" type="color3" nodename="paint_seam_p7" />
+      <input name="mix" type="float" nodename="seam_p8" />
+    </mix>
+    <mxlogo_stroke name="seam_p9" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="-0.333333, -0.096225" />
+      <input name="b" type="vector2" value="-0.5, -0.19245" />
+      <input name="radius" type="float" nodename="line_radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_stroke>
+    <mix name="paint_seam_p9" type="color3">
+      <input name="fg" type="color3" nodename="c_seam_pink" />
+      <input name="bg" type="color3" nodename="paint_seam_p8" />
+      <input name="mix" type="float" nodename="seam_p9" />
+    </mix>
+    <mxlogo_stroke name="seam_p10" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="-0.333333, 0.096225" />
+      <input name="b" type="vector2" value="-0.166667, 0.19245" />
+      <input name="radius" type="float" nodename="line_radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_stroke>
+    <mix name="paint_seam_p10" type="color3">
+      <input name="fg" type="color3" nodename="c_seam_pink" />
+      <input name="bg" type="color3" nodename="paint_seam_p9" />
+      <input name="mix" type="float" nodename="seam_p10" />
+    </mix>
+    <mxlogo_stroke name="seam_p11" type="float">
+      <input name="uv" type="vector2" nodename="p" />
+      <input name="a" type="vector2" value="-0.166667, 0.19245" />
+      <input name="b" type="vector2" value="-0.166667, 0" />
+      <input name="radius" type="float" nodename="line_radius" />
+      <input name="softness" type="float" interfacename="softness" />
+    </mxlogo_stroke>
+    <mix name="paint_seam_p11" type="color3">
+      <input name="fg" type="color3" nodename="c_seam_pink" />
+      <input name="bg" type="color3" nodename="paint_seam_p10" />
+      <input name="mix" type="float" nodename="seam_p11" />
+    </mix>
+    <add name="aadd1" type="float">
+      <input name="in1" type="float" nodename="mask_slash" />
+      <input name="in2" type="float" nodename="mask_bandu" />
+    </add>
+    <add name="aadd2" type="float">
+      <input name="in1" type="float" nodename="aadd1" />
+      <input name="in2" type="float" nodename="mask_bandl" />
+    </add>
+    <add name="aadd3" type="float">
+      <input name="in1" type="float" nodename="aadd2" />
+      <input name="in2" type="float" nodename="mask_smalltri" />
+    </add>
+    <add name="aadd4" type="float">
+      <input name="in1" type="float" nodename="aadd3" />
+      <input name="in2" type="float" nodename="mask_cube" />
+    </add>
+    <add name="aadd5" type="float">
+      <input name="in1" type="float" nodename="aadd4" />
+      <input name="in2" type="float" nodename="mask_pink1" />
+    </add>
+    <add name="aadd6" type="float">
+      <input name="in1" type="float" nodename="aadd5" />
+      <input name="in2" type="float" nodename="mask_pink2" />
+    </add>
+    <add name="aadd7" type="float">
+      <input name="in1" type="float" nodename="aadd6" />
+      <input name="in2" type="float" nodename="seam_c0" />
+    </add>
+    <add name="aadd8" type="float">
+      <input name="in1" type="float" nodename="aadd7" />
+      <input name="in2" type="float" nodename="seam_c1" />
+    </add>
+    <add name="aadd9" type="float">
+      <input name="in1" type="float" nodename="aadd8" />
+      <input name="in2" type="float" nodename="seam_c2" />
+    </add>
+    <add name="aadd10" type="float">
+      <input name="in1" type="float" nodename="aadd9" />
+      <input name="in2" type="float" nodename="seam_c3" />
+    </add>
+    <add name="aadd11" type="float">
+      <input name="in1" type="float" nodename="aadd10" />
+      <input name="in2" type="float" nodename="seam_c4" />
+    </add>
+    <add name="aadd12" type="float">
+      <input name="in1" type="float" nodename="aadd11" />
+      <input name="in2" type="float" nodename="seam_c5" />
+    </add>
+    <add name="aadd13" type="float">
+      <input name="in1" type="float" nodename="aadd12" />
+      <input name="in2" type="float" nodename="seam_c6" />
+    </add>
+    <add name="aadd14" type="float">
+      <input name="in1" type="float" nodename="aadd13" />
+      <input name="in2" type="float" nodename="seam_c7" />
+    </add>
+    <add name="aadd15" type="float">
+      <input name="in1" type="float" nodename="aadd14" />
+      <input name="in2" type="float" nodename="seam_c8" />
+    </add>
+    <add name="aadd16" type="float">
+      <input name="in1" type="float" nodename="aadd15" />
+      <input name="in2" type="float" nodename="seam_p0" />
+    </add>
+    <add name="aadd17" type="float">
+      <input name="in1" type="float" nodename="aadd16" />
+      <input name="in2" type="float" nodename="seam_p1" />
+    </add>
+    <add name="aadd18" type="float">
+      <input name="in1" type="float" nodename="aadd17" />
+      <input name="in2" type="float" nodename="seam_p2" />
+    </add>
+    <add name="aadd19" type="float">
+      <input name="in1" type="float" nodename="aadd18" />
+      <input name="in2" type="float" nodename="seam_p3" />
+    </add>
+    <add name="aadd20" type="float">
+      <input name="in1" type="float" nodename="aadd19" />
+      <input name="in2" type="float" nodename="seam_p4" />
+    </add>
+    <add name="aadd21" type="float">
+      <input name="in1" type="float" nodename="aadd20" />
+      <input name="in2" type="float" nodename="seam_p5" />
+    </add>
+    <add name="aadd22" type="float">
+      <input name="in1" type="float" nodename="aadd21" />
+      <input name="in2" type="float" nodename="seam_p6" />
+    </add>
+    <add name="aadd23" type="float">
+      <input name="in1" type="float" nodename="aadd22" />
+      <input name="in2" type="float" nodename="seam_p7" />
+    </add>
+    <add name="aadd24" type="float">
+      <input name="in1" type="float" nodename="aadd23" />
+      <input name="in2" type="float" nodename="seam_p8" />
+    </add>
+    <add name="aadd25" type="float">
+      <input name="in1" type="float" nodename="aadd24" />
+      <input name="in2" type="float" nodename="seam_p9" />
+    </add>
+    <add name="aadd26" type="float">
+      <input name="in1" type="float" nodename="aadd25" />
+      <input name="in2" type="float" nodename="seam_p10" />
+    </add>
+    <add name="aadd27" type="float">
+      <input name="in1" type="float" nodename="aadd26" />
+      <input name="in2" type="float" nodename="seam_p11" />
+    </add>
+    <clamp name="alpha" type="float">
+      <input name="in" type="float" nodename="aadd27" />
+    </clamp>
+    <separate3 name="rgbsep" type="multioutput">
+      <input name="in" type="color3" nodename="paint_seam_p11" />
+    </separate3>
+    <combine4 name="rgba" type="color4">
+      <input name="in1" type="float" nodename="rgbsep" output="outr" />
+      <input name="in2" type="float" nodename="rgbsep" output="outg" />
+      <input name="in3" type="float" nodename="rgbsep" output="outb" />
+      <input name="in4" type="float" nodename="alpha" />
+    </combine4>
+    <output name="out" type="color4" nodename="rgba" />
+  </nodegraph>
+  <materialx_logo name="logo_pattern" type="color4" />
+  <convert name="logo_rgb" type="color3">
+    <input name="in" type="color4" nodename="logo_pattern" />
+  </convert>
+  <separate4 name="logo_split" type="multioutput">
+    <input name="in" type="color4" nodename="logo_pattern" />
+  </separate4>
+  <mix name="logo_over_bg" type="color3">
+    <input name="fg" type="color3" nodename="logo_rgb" />
+    <input name="bg" type="color3" value="0.089, 0.093, 0.107" />
+    <input name="mix" type="float" nodename="logo_split" output="outa" />
+  </mix>
+  <standard_surface name="SR_materialx_logo" type="surfaceshader">
+    <input name="base" type="float" value="1" />
+    <input name="base_color" type="color3" nodename="logo_over_bg" />
+    <input name="specular" type="float" value="1" />
+    <input name="specular_roughness" type="float" value="0.5" />
+  </standard_surface>
+  <surfacematerial name="M_materialx_logo" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="SR_materialx_logo" />
+  </surfacematerial>
+</materialx>
