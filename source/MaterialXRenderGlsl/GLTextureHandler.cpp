@@ -120,11 +120,15 @@ bool GLTextureHandler::createRenderResources(ImagePtr image, bool generateMipMap
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexImage2D(GL_TEXTURE_2D, 0, glInternalFormat, image->getWidth(), image->getHeight(),
                  0, glFormat, glType, image->getResourceBuffer());
-    if (image->getChannelCount() == 1)
-    {
-        GLint swizzleMask[] = { GL_RED, GL_RED, GL_RED, GL_ONE };
-        glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-    }
+
+    // No channel swizzle is applied for images with fewer than four channels.  The
+    // specification states that when an image node has more channels than the file it
+    // references, "the output will contain zero values in all channels beyond the N
+    // channels of the image file, aside from the fourth channel which is populated with
+    // 1", and the default OpenGL sampling of the GL_RED, GL_RG and GL_RGB formats is
+    // exactly that rule.  Replicating a single channel across RGB would instead give a
+    // greyscale file the behavior of a scalar broadcast, which the specification
+    // reserves for the scalar form of the convert node.
 
     if (generateMipMaps)
     {

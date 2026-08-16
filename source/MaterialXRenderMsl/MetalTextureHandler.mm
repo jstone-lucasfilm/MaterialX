@@ -146,25 +146,18 @@ bool MetalTextureHandler::createRenderResources(ImagePtr image, bool generateMip
                         (useAsRenderTarget ? MTLTextureUsageRenderTarget : 0);
         texDesc.resourceOptions = MTLResourceStorageModePrivate;
         texDesc.pixelFormat = pixelFormat;
-        if (generateMipMaps)
-        {
-            if (image->getChannelCount() == 1)
-            {
-                texDesc.swizzle = MTLTextureSwizzleChannelsMake(
-                    MTLTextureSwizzleRed,
-                    MTLTextureSwizzleRed,
-                    MTLTextureSwizzleRed,
-                    MTLTextureSwizzleRed);
-            }
-            else if (image->getChannelCount() == 2)
-            {
-                texDesc.swizzle = MTLTextureSwizzleChannelsMake(
-                    MTLTextureSwizzleRed,
-                    MTLTextureSwizzleGreen,
-                    MTLTextureSwizzleRed,
-                    MTLTextureSwizzleGreen);
-            }
-        }
+
+        // No channel swizzle is applied for images with fewer than four channels.  The
+        // specification states that when an image node has more channels than the file it
+        // references, "the output will contain zero values in all channels beyond the N
+        // channels of the image file, aside from the fourth channel which is populated
+        // with 1", and the default Metal sampling of the one- and two-channel pixel
+        // formats is exactly that rule.  The swizzles applied here previously replicated
+        // the first channel across RGB, which the specification reserves for the scalar
+        // form of the convert node, and carried the replicated value into alpha as well;
+        // they were also applied only when mipmaps were generated, so a file's channel
+        // promotion depended on whether mipmaps had been requested.
+
         texture = [_device newTextureWithDescriptor:texDesc];
         _metalTextureMap[resourceId] = texture;
         image->setResourceId(resourceId);
