@@ -74,6 +74,16 @@ class MX_GENSHADER_API ColorManagementSystem
         return isReservedNoOpColorSpace(colorSpace);
     }
 
+    /// Returns true if no color transformation is required between the given source
+    /// and target color spaces, meaning that the two names refer to the same color
+    /// space. The base implementation compares the names directly. Subclasses may
+    /// extend this to recognize aliases of the same color space, such as a legacy
+    /// name and its color interop equivalent.
+    virtual bool isNoOpTransform(const string& sourceColorSpace, const string& targetColorSpace) const
+    {
+        return sourceColorSpace == targetColorSpace;
+    }
+
     /// The colorSpace strings should not be shown directly in a user interface. This function
     /// converts a colorSpace into a user-facing name. For example, "lin_rec709_scene" becomes
     /// "Linear Rec.709 (sRGB)". If the colorSpace is not recognized, it is returned unchanged.

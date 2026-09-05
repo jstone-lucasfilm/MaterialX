@@ -132,6 +132,14 @@ class TestGenShader(unittest.TestCase):
         self.assertEqual(cms.getUserFacingName("lin_rec709_scene"), "Linear Rec.709 (sRGB)")
         self.assertEqual(cms.getUserFacingName("bogus_colorspace"), "bogus_colorspace")
 
+        # A legacy color space name and its color interop equivalent refer to the same
+        # color space, so no transform is required between them.
+        self.assertTrue(cms.isNoOpTransform("lin_rec709", "lin_rec709_scene"))
+        self.assertTrue(cms.isNoOpTransform("srgb_rec709_scene", "srgb_texture"))
+        self.assertTrue(cms.isNoOpTransform("acescg", "acescg"))
+        self.assertFalse(cms.isNoOpTransform("lin_rec709", "acescg"))
+        self.assertFalse(cms.isNoOpTransform("srgb_texture", "lin_rec709_scene"))
+
         # A bare ColorManagementSystem, i.e. the Python trampoline with no Python-side
         # overrides, must still inherit the base C++ implementation of isNoOpColorSpace
         # and getUserFacingName, so "none"/"data" are recognized without requiring every
@@ -141,8 +149,10 @@ class TestGenShader(unittest.TestCase):
         self.assertTrue(baseCms.isNoOpColorSpace("data"))
         self.assertFalse(baseCms.isNoOpColorSpace("lin_rec709_scene"))
         # The base ColorManagementSystem does not even recognize the default names,
-        # so they are returned unmodified.
+        # so they are returned unmodified, and only identical names are equivalent.
         self.assertEqual(baseCms.getUserFacingName("lin_rec709_scene"), "lin_rec709_scene")
+        self.assertTrue(baseCms.isNoOpTransform("lin_rec709_scene", "lin_rec709_scene"))
+        self.assertFalse(baseCms.isNoOpTransform("lin_rec709", "lin_rec709_scene"))
 
         # A Python subclass may override isNoOpColorSpace and getUserFacingName, and the
         # C++ trampoline must dispatch to those Python overrides.

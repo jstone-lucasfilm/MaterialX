@@ -323,6 +323,12 @@ void ShaderGraph::addColorTransformNode(ShaderInput* input, const ColorSpaceTran
         shaderInput->setValue(input->getValue());
         shaderInput->setPath(input->getPath());
         shaderInput->setUnit(EMPTY_STRING);
+        if (input->isUniform())
+        {
+            // Preserve the uniform flag, so that targets which distinguish uniform
+            // and varying values (e.g. MDL) declare the published value as uniform.
+            shaderInput->setUniform();
+        }
 
         if (input->isBindInput())
         {
@@ -394,6 +400,10 @@ void ShaderGraph::addUnitTransformNode(ShaderInput* input, const UnitTransform& 
         shaderInput->setPath(input->getPath());
         shaderInput->setUnit(input->getUnit());
         shaderInput->setColorSpace(input->getColorSpace());
+        if (input->isUniform())
+        {
+            shaderInput->setUniform();
+        }
 
         if (input->isBindInput())
         {
@@ -1203,10 +1213,17 @@ void ShaderGraph::populateColorTransformMap(ColorManagementSystemPtr colorManage
                                         ColorManagementSystem::isReservedNoOpColorSpace(colorSpace);
     };
 
+    // A source and target pair that the color management system considers equivalent
+    // (e.g. a legacy color space name and its color interop equivalent) likewise requires
+    // no transform, and in particular must not introduce a pass-through node into the graph.
+    const bool isNoOpTransform = colorManagementSystem ?
+                                 colorManagementSystem->isNoOpTransform(sourceColorSpace, targetColorSpace) :
+                                 sourceColorSpace == targetColorSpace;
+
     if (!shaderPort ||
         sourceColorSpace.empty() ||
         targetColorSpace.empty() ||
-        sourceColorSpace == targetColorSpace ||
+        isNoOpTransform ||
         isNoOpColorSpace(sourceColorSpace) ||
         isNoOpColorSpace(targetColorSpace))
     {

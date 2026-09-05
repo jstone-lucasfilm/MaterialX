@@ -34,6 +34,11 @@ class MX_GENSHADER_API DefaultColorManagementSystem : public ColorManagementSyst
     /// "Linear Rec.709 (sRGB)". If the colorSpace is not recognized, it is returned unchanged.
     string getUserFacingName(const string& colorSpace) const override;
 
+    /// Returns true if the given source and target color space names refer to the
+    /// same color space, including the case where one is a legacy name and the other
+    /// is its color interop equivalent (e.g. "lin_rec709" and "lin_rec709_scene").
+    bool isNoOpTransform(const string& sourceColorSpace, const string& targetColorSpace) const override;
+
   protected:
     /// Returns a nodedef for a given transform
     NodeDefPtr getNodeDef(const ColorSpaceTransform& transform) const override;
