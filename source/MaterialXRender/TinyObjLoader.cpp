@@ -66,6 +66,31 @@ bool TinyObjLoader::load(const FilePath& filePath, MeshList& meshList, bool texc
         return false;
     }
 
+    // Validate that every face index references in-range vertex data, guarding
+    // against out-of-bounds reads from malformed or malicious .obj files.  The
+    // tinyobj parser resolves index values without checking them against the
+    // attribute arrays, so a face may reference a position, normal, or texture
+    // coordinate beyond the data actually present in the file.
+    const size_t vertexCount = attrib.vertices.size() / MeshStream::STRIDE_3D;
+    const size_t normalCount = attrib.normals.size() / MeshStream::STRIDE_3D;
+    const size_t texcoordCount = attrib.texcoords.size() / MeshStream::STRIDE_2D;
+    for (const tinyobj::shape_t& shape : shapes)
+    {
+        for (const tinyobj::index_t& indexObj : shape.mesh.indices)
+        {
+            if (indexObj.vertex_index < 0 ||
+                static_cast<size_t>(indexObj.vertex_index) >= vertexCount ||
+                (indexObj.normal_index >= 0 &&
+                 static_cast<size_t>(indexObj.normal_index) >= normalCount) ||
+                (indexObj.texcoord_index >= 0 &&
+                 static_cast<size_t>(indexObj.texcoord_index) >= texcoordCount))
+            {
+                std::cerr << "Invalid vertex index in OBJ file: " << filePath.asString() << std::endl;
+                return false;
+            }
+        }
+    }
+
     MeshPtr mesh = Mesh::create(filePath);
     meshList.push_back(mesh);
     mesh->setSourceUri(filePath);
