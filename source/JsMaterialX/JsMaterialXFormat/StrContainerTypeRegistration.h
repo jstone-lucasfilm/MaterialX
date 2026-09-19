@@ -21,12 +21,24 @@ namespace emscripten
 namespace internal 
 {
 
-template<typename T>
-struct TypeID<T, typename std::enable_if<IsStrContainer<typename std::remove_cv<typename std::remove_reference<T>::type>::type>::value, void>::type> {
-  static constexpr TYPEID get() {
-    return TypeID<StrContainerIntermediate>::get();
-  }
-};
+// Register a string-like container type with embind by mapping it to the
+// intermediate std::string type.  Explicit specializations are used for the
+// const and reference forms so that they take precedence over the generic
+// TypeID<const T>, TypeID<T&> specializations introduced in Emscripten 4.0.9.
+#define MX_REGISTER_STR_CONTAINER_TYPEID(TYPE)              \
+template<> struct TypeID<TYPE> {                            \
+  static constexpr TYPEID get() {                           \
+    return TypeID<StrContainerIntermediate>::get();         \
+  }                                                         \
+};                                                          \
+template<> struct TypeID<const TYPE> : TypeID<TYPE> {};     \
+template<> struct TypeID<TYPE&> : TypeID<TYPE> {};          \
+template<> struct TypeID<const TYPE&> : TypeID<TYPE> {};
+
+MX_REGISTER_STR_CONTAINER_TYPEID(mx::FilePath)
+MX_REGISTER_STR_CONTAINER_TYPEID(mx::FileSearchPath)
+
+#undef MX_REGISTER_STR_CONTAINER_TYPEID
 
 template<typename T>
 struct BindingType<T, typename std::enable_if<IsStrContainer<T>::value, void>::type> {

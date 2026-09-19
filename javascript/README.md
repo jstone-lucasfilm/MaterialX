@@ -10,7 +10,7 @@ The emscripten SDK is required to generate the JavaScript bindings. There are se
 
 To install the SDK directly, follow the instructions of the [emscripten SDK installation Guide](https://emscripten.org/docs/getting_started/downloads.html#installation-instructions-using-the-emsdk-recommended). Make sure to install prerequisites depending on your platform and read usage hints first (e.g. differences between Unix / Windows scripts). 
 
-The recommended version is `4.0.8`. Do not automatically update to the latest version to avoid build issues.
+The recommended version is `4.0.23`. Do not automatically update to the latest version to avoid build issues.
 
 Note that following the instructions will set some environment variables that are required to use the  SDK. These variables are only set temporarily for the current terminal, though. Setting the environment variables in other terminals can be achieved by running
 ```sh
@@ -250,7 +250,7 @@ const glPixelShader = gl.createShader(gl.FRAGMENT_SHADER);
 gl.shaderSource(glPixelShader, fShader);
 gl.compileShader(glPixelShader);
 ```
-However, any rendering framework that supports custom shaders should do. In the [Web Viewer sample app](./MaterialXView/src/index.js) we use the [RawShaderMaterial](https://threejs.org/docs/index.html?q=RawSh#api/en/materials/RawShaderMaterial) class from [three.js](https://threejs.org/).
+However, any rendering framework that supports custom shaders should do. In the [Web Viewer sample app](./MaterialXView/source/index.js) we use the [RawShaderMaterial](https://threejs.org/docs/index.html?q=RawSh#api/en/materials/RawShaderMaterial) class from [three.js](https://threejs.org/).
 
 #### Getting the shader uniforms
 The uniform values can be obtained from the shader as a JSON, either for the vertex or the pixel shader.
@@ -259,7 +259,7 @@ shader.getUniformValues("vertex");
 shader.getUniformValues("pixel")
 ```
 Each entry corresponds to a uniform name and the value is an object which contains the type as specified in the generators Syntax class and the stringified value. Some of the commonly used uniform names in the generated shader are listed [here](../../documents/DeveloperGuide/ShaderGeneration.md#162-variable-naming-convention).
-An example that parses the JSON and feeds the uniform data to a three.js based application can be found in the [Web Viewer Sample App](./MaterialXView/src/index.js).
+An example that parses the JSON and feeds the uniform data to a three.js based application can be found in the [Web Viewer Sample App](./MaterialXView/source/index.js).
 
 ## Maintaining the Bindings
 This section provides some background on binding creation for contributors. In general, we recommend to look at existing bindings for examples.
