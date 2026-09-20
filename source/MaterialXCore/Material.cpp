@@ -24,14 +24,26 @@ vector<NodePtr> getShaderNodes(NodePtr materialNode, const string& nodeType, con
             
             if (shaderNode->isMultiOutputType())
             {
-                const vector<OutputPtr>& activeOutputs = shaderNode->getActiveOutputs();
-                bool multiOutputMatches = std::any_of(activeOutputs.begin(), activeOutputs.end(), [&nodeType](const OutputPtr& output)
+                // Match against the output connected to this input, or against any
+                // output if no specific output is named. Outputs are taken from the
+                // node instance, falling back to its nodedef when none are declared.
+                vector<OutputPtr> activeOutputs = shaderNode->getActiveOutputs();
+                if (activeOutputs.empty())
                 {
-                    return output->getType() == nodeType;
+                    NodeDefPtr shaderNodeDef = shaderNode->getNodeDef(target);
+                    if (shaderNodeDef)
+                    {
+                        activeOutputs = shaderNodeDef->getActiveOutputs();
+                    }
+                }
+                const string& outputName = input->getOutputString();
+                bool multiOutputMatches = std::any_of(activeOutputs.begin(), activeOutputs.end(), [&nodeType, &outputName](const OutputPtr& output)
+                {
+                    return output->getType() == nodeType && (outputName.empty() || output->getName() == outputName);
                 });
                 inputMatchesOutputType = multiOutputMatches || inputMatchesOutputType;
             }
-            
+
             if (!inputMatchesOutputType)
             {
                 continue;

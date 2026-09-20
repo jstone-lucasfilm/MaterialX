@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<materialx version="1.39">
+  <!-- Test a custom node graph with a surfaceshader output that is not the first output -->
+  <nodedef name="ND_mixed_multioutput" node="mixed_multioutput" version="1.0" isdefaultversion="true">
+    <input name="weight" type="float" value="0.75" />
+    <output name="weight_out" type="float" />
+    <output name="surface_out" type="surfaceshader" />
+  </nodedef>
+  <nodegraph name="NG_mixed_multioutput" nodedef="ND_mixed_multioutput">
+    <add name="weight_add" type="float">
+      <input name="in1" type="float" interfacename="weight" />
+    </add>
+    <oren_nayar_diffuse_bsdf name="diffuse_bsdf" type="BSDF">
+      <input name="weight" type="float" interfacename="weight" />
+      <input name="color" type="color3" value="0.7, 0.2, 0.2" />
+    </oren_nayar_diffuse_bsdf>
+    <surface name="diffuse_surface" type="surfaceshader">
+      <input name="bsdf" type="BSDF" nodename="diffuse_bsdf" />
+    </surface>
+    <output name="weight_out" type="float" nodename="weight_add" />
+    <output name="surface_out" type="surfaceshader" nodename="diffuse_surface" />
+  </nodegraph>
+  <mixed_multioutput name="mixed_multioutput1" type="multioutput" />
+  <surfacematerial name="mixed_multioutput_material" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="mixed_multioutput1" output="surface_out" />
+  </surfacematerial>
+</materialx>

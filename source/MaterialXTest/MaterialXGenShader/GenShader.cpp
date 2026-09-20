@@ -7,6 +7,7 @@
 #include <MaterialXTest/MaterialXGenShader/GenShaderUtil.h>
 
 #include <MaterialXCore/Document.h>
+#include <MaterialXCore/Material.h>
 
 #include <MaterialXFormat/File.h>
 #include <MaterialXFormat/Util.h>
@@ -23,6 +24,7 @@
 
 #ifdef MATERIALX_BUILD_GEN_GLSL
 #include <MaterialXGenGlsl/GlslShaderGenerator.h>
+#include <MaterialXGenHw/HwShaderGenerator.h>
 #endif
 #ifdef MATERIALX_BUILD_GEN_OSL
 #include <MaterialXGenOsl/OslShaderGenerator.h>
@@ -136,6 +138,96 @@ TEST_CASE("GenShader: Duplicate Output Color Transforms", "[genshader]")
         }
     }
     CHECK(transformCount == 1);
+}
+
+TEST_CASE("GenShader: Multi-Output Graph Classification", "[genshader]")
+{
+    mx::FileSearchPath searchPath = mx::getDefaultDataSearchPath();
+    mx::DocumentPtr libraries = mx::createDocument();
+    mx::loadLibraries({ "libraries" }, searchPath, libraries);
+
+    mx::ShaderGeneratorPtr shaderGenerator = mx::GlslShaderGenerator::create();
+    mx::GenContext context(shaderGenerator);
+    context.registerSourceCodeSearchPath(searchPath);
+
+    // A compound node with both a non-shader output and a surfaceshader output.
+    // The classification of the graph must not depend on the output order.
+    const std::string nodeDefFloatOutput = R"(<output name="out_float" type="float" />)";
+    const std::string nodeDefSurfOutput = R"(<output name="out_surf" type="surfaceshader" />)";
+    const std::string graphFloatOutput = R"(<output name="out_float" type="float" nodename="add" />)";
+    const std::string graphSurfOutput = R"(<output name="out_surf" type="surfaceshader" nodename="surface" />)";
+    std::string nodeDefOutputs;
+    std::string graphOutputs;
+    SECTION("Shader output first")
+    {
+        nodeDefOutputs = nodeDefSurfOutput + nodeDefFloatOutput;
+        graphOutputs = graphSurfOutput + graphFloatOutput;
+    }
+    SECTION("Shader output last")
+    {
+        nodeDefOutputs = nodeDefFloatOutput + nodeDefSurfOutput;
+        graphOutputs = graphFloatOutput + graphSurfOutput;
+    }
+
+    const std::string docString = R"(<?xml version="1.0"?>
+      <materialx version="1.39">
+        <nodedef name="ND_multi_output_test" node="multi_output_test">
+          <input name="in" type="float" value="0.5" />
+          )" + nodeDefOutputs + R"(
+        </nodedef>
+        <nodegraph name="NG_multi_output_test" nodedef="ND_multi_output_test">
+          <add name="add" type="float">
+            <input name="in1" type="float" interfacename="in" />
+          </add>
+          <oren_nayar_diffuse_bsdf name="bsdf" type="BSDF">
+            <input name="weight" type="float" interfacename="in" />
+          </oren_nayar_diffuse_bsdf>
+          <surface name="surface" type="surfaceshader">
+            <input name="bsdf" type="BSDF" nodename="bsdf" />
+          </surface>
+          )" + graphOutputs + R"(
+        </nodegraph>
+        <multi_output_test name="multi_output_test" type="multioutput" />
+        <surfacematerial name="multi_output_material" type="material">
+          <input name="surfaceshader" type="surfaceshader" nodename="multi_output_test" output="out_surf" />
+        </surfacematerial>
+      </materialx>)";
+    mx::DocumentPtr doc = mx::createDocument();
+    mx::readFromXmlString(doc, docString);
+    doc->setDataLibrary(libraries);
+    REQUIRE(doc->validate());
+
+    // The material is discoverable as a renderable element.
+    mx::NodePtr materialNode = doc->getNode("multi_output_material");
+    REQUIRE(materialNode);
+    CHECK(!mx::getShaderNodes(materialNode).empty());
+
+    mx::ShaderPtr shader;
+    REQUIRE_NOTHROW(shader = shaderGenerator->generate("multi_output_material", materialNode, context));
+    REQUIRE(shader);
+
+    // The material is driven by a lit surface shader.
+    const mx::ShaderGraph& graph = shader->getGraph();
+    CHECK(graph.hasClassification(mx::ShaderNode::Classification::SHADER));
+    CHECK(graph.hasClassification(mx::ShaderNode::Classification::SURFACE));
+    CHECK(!graph.hasClassification(mx::ShaderNode::Classification::UNLIT));
+    auto hwShaderGenerator = std::dynamic_pointer_cast<mx::HwShaderGenerator>(shaderGenerator);
+    REQUIRE(hwShaderGenerator);
+    CHECK(hwShaderGenerator->requiresLighting(graph));
+
+    // Lighting support is emitted in the pixel stage.
+    const std::string& pixelCode = shader->getSourceCode(mx::Stage::PIXEL);
+    CHECK(pixelCode.find("#define DIRECTIONAL_ALBEDO_METHOD") != std::string::npos);
+
+    // The compound node is emitted as a closure, so its BSDF is evaluated
+    // within the lighting loop of the surface node rather than at function scope.
+    const size_t functionPos = pixelCode.find("void NG_multi_output_test(");
+    REQUIRE(functionPos != std::string::npos);
+    const size_t closureDataPos = pixelCode.find("ClosureData closureData", functionPos);
+    const size_t bsdfCallPos = pixelCode.find("mx_oren_nayar_diffuse_bsdf(", functionPos);
+    REQUIRE(closureDataPos != std::string::npos);
+    REQUIRE(bsdfCallPos != std::string::npos);
+    CHECK(closureDataPos < bsdfCallPos);
 }
 #endif
 

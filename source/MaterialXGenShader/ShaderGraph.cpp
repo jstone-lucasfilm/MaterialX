@@ -895,6 +895,9 @@ const ShaderNode* ShaderGraph::getNode(const string& uniqueId) const
 
 void ShaderGraph::finalize(GenContext& context)
 {
+    // Sort upstream-first so that classification propagates through nested graphs.
+    topologicalSort();
+
     // Allow node implementations to update the classification
     // on its node instances
     for (ShaderNode* node : getNodes())
@@ -902,11 +905,13 @@ void ShaderGraph::finalize(GenContext& context)
         node->getImplementation().addClassification(*node);
     }
 
-    // Add classification according to root node
-    ShaderGraphOutputSocket* outputSocket = getOutputSocket();
-    if (outputSocket->getConnection())
+    // Add classification according to the root node of each output
+    for (ShaderGraphOutputSocket* outputSocket : getOutputSockets())
     {
-        addClassification(outputSocket->getConnection()->getNode()->getClassification());
+        if (outputSocket->getConnection())
+        {
+            addClassification(outputSocket->getConnection()->getNode()->getClassification());
+        }
     }
 
     // Insert color transformation nodes where needed

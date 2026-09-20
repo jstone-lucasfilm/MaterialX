@@ -85,7 +85,14 @@ bool ShaderNodeImpl::nodeOutputIsClosure(const ShaderNode& node) const
         // node type if no output is present.
         throw ExceptionShaderGenError("Node has no outputs defined'");
     }
-    return outputs[0]->getType().isClosure();
+    for (const ShaderOutput* output : outputs)
+    {
+        if (output->getType().isClosure())
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 ShaderNodeImplPtr NopNode::create()
