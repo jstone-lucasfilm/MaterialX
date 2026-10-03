@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <materialx version="1.39" colorspace="lin_ap1_scene">
   <nodedef name="ND_lama_iridescence" node="LamaIridescence" nodegroup="pbr" doc="Lama iridescence" version="1.0" isdefaultversion="true">
-    <input name="roughness" type="float" value="0.01" uimin="0.0" uimax="1.0" uiname="Roughness" uifolder="Main"
+    <input name="roughness" type="float" value="0.0" uimin="0.0" uimax="1.0" uiname="Roughness" uifolder="Main"
            doc="Micro-facet distribution roughness." />
     <input name="anisotropy" type="float" value="0.0" uimin="-1.0" uimax="1.0" uiname="Anisotropy" uifolder="Anisotropy"
            doc="Defines the amount of anisotropy, changing the co-tangent axis roughness from the original value to 1 (or to 0 with a negative value)." />
@@ -17,6 +17,8 @@
            doc="Maximum thin film thickness in nanometers, driving the iridescent effect." />
     <input name="filmIOR" type="float" value="1.3" uimin="0.0" uisoftmin="1.0" uisoftmax="3.0" uiname="IOR" uifolder="Main"
            doc="Thin film index of refraction, driving the iridescent effect." />
+    <input name="normal" type="vector3" defaultgeomprop="Nworld" uiname="Normal" uifolder="Main"
+           doc="Shading normal, typically defined by bump or normal mapping. Defaults to the smooth surface normal if not set." />
     <output name="out" type="BSDF" />
   </nodedef>
 
@@ -54,36 +56,46 @@
     </power>
     <max name="roughness_anisotropic_squared_clamped" type="vector2">
       <input name="in1" type="vector2" nodename="roughness_anisotropic_squared" />
-      <input name="in2" type="float" value="0.000001" />
+      <input name="in2" type="float" value="0.0001" />
     </max>
 
     <!-- Tangent -->
-    <normal name="tangent_normal" type="vector3">
-      <input name="space" type="string" value="world" />
-    </normal>
+    <clamp name="tangent_rotate_clamped" type="float">
+      <input name="in" type="float" interfacename="anisotropyRotation" />
+    </clamp>
     <multiply name="tangent_rotate_degree" type="float">
-      <input name="in1" type="float" interfacename="anisotropyRotation" />
+      <input name="in1" type="float" nodename="tangent_rotate_clamped" />
       <input name="in2" type="float" value="-360" />
     </multiply>
-    <subtract name="tangent_rotate_degree_offset" type="float">
-      <input name="in1" type="float" nodename="tangent_rotate_degree" />
-      <input name="in2" type="float" value="0" />
-    </subtract>
     <rotate3d name="tangent_rotate" type="vector3">
       <input name="in" type="vector3" interfacename="anisotropyDirection" />
-      <input name="amount" type="float" nodename="tangent_rotate_degree_offset" />
-      <input name="axis" type="vector3" nodename="tangent_normal" />
+      <input name="amount" type="float" nodename="tangent_rotate_degree" />
+      <input name="axis" type="vector3" interfacename="normal" />
     </rotate3d>
     <normalize name="tangent_rotate_normalize" type="vector3">
       <input name="in" type="vector3" nodename="tangent_rotate" />
     </normalize>
 
-    <!-- Thinfilm Thickness -->
-    <mix name="thinfilm_thickness" type="float">
-      <input name="fg" type="float" interfacename="maxFilmThickness" />
-      <input name="bg" type="float" interfacename="minFilmThickness" />
-      <input name="mix" type="float" interfacename="relativeFilmThickness" />
-    </mix>
+    <!-- Thinfilm Thickness: min + clamp(relative, 0, 1) * max(max - min, 0) -->
+    <clamp name="relative_thickness_clamped" type="float">
+      <input name="in" type="float" interfacename="relativeFilmThickness" />
+    </clamp>
+    <subtract name="thickness_range" type="float">
+      <input name="in1" type="float" interfacename="maxFilmThickness" />
+      <input name="in2" type="float" interfacename="minFilmThickness" />
+    </subtract>
+    <max name="thickness_range_clamped" type="float">
+      <input name="in1" type="float" nodename="thickness_range" />
+      <input name="in2" type="float" value="0.0" />
+    </max>
+    <multiply name="thickness_offset" type="float">
+      <input name="in1" type="float" nodename="relative_thickness_clamped" />
+      <input name="in2" type="float" nodename="thickness_range_clamped" />
+    </multiply>
+    <add name="thinfilm_thickness" type="float">
+      <input name="in1" type="float" interfacename="minFilmThickness" />
+      <input name="in2" type="float" nodename="thickness_offset" />
+    </add>
 
     <!-- BSDF -->
     <dielectric_bsdf name="iridescence_bsdf" type="BSDF">
@@ -91,6 +103,7 @@
       <input name="ior" type="float" value="1.0" />
       <input name="thinfilm_thickness" type="float" nodename="thinfilm_thickness" />
       <input name="thinfilm_ior" type="float" interfacename="filmIOR" />
+      <input name="normal" type="vector3" interfacename="normal" />
       <input name="tangent" type="vector3" nodename="tangent_rotate_normalize" />
       <input name="distribution" type="string" value="ggx" />
       <input name="scatter_mode" type="string" value="RT" />

@@ -25,8 +25,8 @@
            doc="When enabled, ignores internal geometry and jumps to the last surface." />
     <input name="sssUnitLength" type="float" value="0.00328" uiname="Unit Length" uifolder="SSS"
            doc="This is the multiplier that converts between millimeters and scene units. Both mean free path and diffuse mean free path are specified in millimeters and this parameter is used for the unit conversion. The default value of 0.00328 converts millimeters to feet. For centimeter scene units, this would be 0.1, for meters it would be 0.001 etc." />
-    <input name="mode" type="integer" uniform="true" enum="Reflection,Transmission,Reflection(with direct illumination)" enumvalues="0,1,2" value="0" uiname="Mode" uifolder="Advanced"
-           doc="If the subsurface is enabled, Reflection: should be used when both the camera and the light are outside of the object. Reflection(with direct illumination): should be used when both the camera and the light are outside of the object. This mode also computes the direct illumination at the sss ray exit point. Transmission: should be used when the light is inside the object while the camera is outside. " />
+    <input name="mode" type="integer" uniform="true" enum="Reflection,Transmission" enumvalues="0,1" value="0" uiname="Mode" uifolder="Advanced"
+           doc="If the subsurface is enabled, Reflection: should be used when both the camera and the light are outside of the object. Transmission: should be used when the light is inside the object while the camera is outside." />
     <input name="albedoInversionMethod" type="integer" enum="Pixar,Chiang" enumvalues="0,1" value="0" uiname="Albedo Inversion Method" uifolder="Advanced"
            doc="Decides which albedo inversion methods is used. Pixar: Does the Pixar Path Traced SSS default albedo inversion. Chiang: Does Chiang's albedo inversion (with no dmfp remapping). The look is closer to Arnold Standard Surface randomwalk." />
     <output name="out" type="BSDF" />
@@ -34,7 +34,7 @@
 
   <nodegraph name="IMPL_lama_sss" nodedef="ND_lama_sss">
 
-    <!-- DMFP -->
+    <!-- Radius in scene units -->
     <multiply name="subsurface_radius_scaled" type="color3">
       <input name="in1" type="color3" interfacename="sssRadius" />
       <input name="in2" type="float" interfacename="sssScale" />
@@ -43,18 +43,208 @@
       <input name="in1" type="color3" nodename="subsurface_radius_scaled" />
       <input name="in2" type="float" interfacename="sssUnitLength" />
     </multiply>
+    <convert name="radius_vector" type="vector3">
+      <input name="in" type="color3" nodename="subsurface_multiply_unitlength" />
+    </convert>
+    <clamp name="albedo" type="color3">
+      <input name="in" type="color3" interfacename="color" />
+    </clamp>
+    <convert name="albedo_vector" type="vector3">
+      <input name="in" type="color3" nodename="albedo" />
+    </convert>
 
-    <!-- BRDF -->
+    <!-- Path-traced modes with Pixar albedo inversion: the radius is a diffuse mean free path l_d, and the
+         mean free path is l_d * (1 - g) * k(albedo), where k(albedo) = sqrt(3 * (1 - alpha')) for the dipole
+         reduced albedo alpha' at eta = 1.5. k is fitted as (1 - a) * (1.72054 - 1.6353 a + 1.00652 a^2) / (1 + 2.86417 a). -->
+    <subtract name="pixar_one_minus_albedo" type="vector3">
+      <input name="in1" type="vector3" value="1.0, 1.0, 1.0" />
+      <input name="in2" type="vector3" nodename="albedo_vector" />
+    </subtract>
+    <multiply name="pixar_num_a" type="vector3">
+      <input name="in1" type="vector3" nodename="albedo_vector" />
+      <input name="in2" type="float" value="1.00652" />
+    </multiply>
+    <add name="pixar_num_b" type="vector3">
+      <input name="in1" type="vector3" nodename="pixar_num_a" />
+      <input name="in2" type="float" value="-1.6353" />
+    </add>
+    <multiply name="pixar_num_c" type="vector3">
+      <input name="in1" type="vector3" nodename="pixar_num_b" />
+      <input name="in2" type="vector3" nodename="albedo_vector" />
+    </multiply>
+    <add name="pixar_num" type="vector3">
+      <input name="in1" type="vector3" nodename="pixar_num_c" />
+      <input name="in2" type="float" value="1.72054" />
+    </add>
+    <multiply name="pixar_den_a" type="vector3">
+      <input name="in1" type="vector3" nodename="albedo_vector" />
+      <input name="in2" type="float" value="2.86417" />
+    </multiply>
+    <add name="pixar_den" type="vector3">
+      <input name="in1" type="vector3" nodename="pixar_den_a" />
+      <input name="in2" type="float" value="1.0" />
+    </add>
+    <divide name="pixar_ratio" type="vector3">
+      <input name="in1" type="vector3" nodename="pixar_num" />
+      <input name="in2" type="vector3" nodename="pixar_den" />
+    </divide>
+    <multiply name="pixar_k" type="vector3">
+      <input name="in1" type="vector3" nodename="pixar_ratio" />
+      <input name="in2" type="vector3" nodename="pixar_one_minus_albedo" />
+    </multiply>
+    <min name="anisotropy_clamped" type="float">
+      <input name="in1" type="float" interfacename="sssAnisotropy" />
+      <input name="in2" type="float" value="0.99" />
+    </min>
+    <subtract name="one_minus_anisotropy" type="float">
+      <input name="in1" type="float" value="1.0" />
+      <input name="in2" type="float" nodename="anisotropy_clamped" />
+    </subtract>
+    <multiply name="pixar_factor" type="vector3">
+      <input name="in1" type="vector3" nodename="pixar_k" />
+      <input name="in2" type="float" nodename="one_minus_anisotropy" />
+    </multiply>
+
+    <!-- Path-traced modes with Chiang albedo inversion: the radius is used directly as the mean free path -->
+    <ifequal name="pathtraced_factor" type="vector3">
+      <input name="value1" type="integer" interfacename="albedoInversionMethod" />
+      <input name="value2" type="integer" value="1" />
+      <input name="in1" type="vector3" value="1.0, 1.0, 1.0" />
+      <input name="in2" type="vector3" nodename="pixar_factor" />
+    </ifequal>
+
+    <!-- Diffusion Burley: convert the diffuse mean free path to a mean free path with matching profile width,
+         using the Christensen-Burley scaling factors, s_mfp(a) / s_dmfp(a) -->
+    <subtract name="burley_a_minus_08" type="vector3">
+      <input name="in1" type="vector3" nodename="albedo_vector" />
+      <input name="in2" type="float" value="0.8" />
+    </subtract>
+    <absval name="burley_a_minus_08_abs" type="vector3">
+      <input name="in" type="vector3" nodename="burley_a_minus_08" />
+    </absval>
+    <power name="burley_a_minus_08_cubed" type="vector3">
+      <input name="in1" type="vector3" nodename="burley_a_minus_08_abs" />
+      <input name="in2" type="float" value="3.0" />
+    </power>
+    <multiply name="burley_s_mfp_a" type="vector3">
+      <input name="in1" type="vector3" nodename="burley_a_minus_08_cubed" />
+      <input name="in2" type="float" value="7.0" />
+    </multiply>
+    <subtract name="burley_s_mfp_b" type="vector3">
+      <input name="in1" type="vector3" value="1.85, 1.85, 1.85" />
+      <input name="in2" type="vector3" nodename="albedo_vector" />
+    </subtract>
+    <add name="burley_s_mfp" type="vector3">
+      <input name="in1" type="vector3" nodename="burley_s_mfp_b" />
+      <input name="in2" type="vector3" nodename="burley_s_mfp_a" />
+    </add>
+    <subtract name="burley_a_minus_033" type="vector3">
+      <input name="in1" type="vector3" nodename="albedo_vector" />
+      <input name="in2" type="float" value="0.33" />
+    </subtract>
+    <absval name="burley_a_minus_033_abs" type="vector3">
+      <input name="in" type="vector3" nodename="burley_a_minus_033" />
+    </absval>
+    <power name="burley_a_minus_033_pow4" type="vector3">
+      <input name="in1" type="vector3" nodename="burley_a_minus_033_abs" />
+      <input name="in2" type="float" value="4.0" />
+    </power>
+    <multiply name="burley_s_dmfp_a" type="vector3">
+      <input name="in1" type="vector3" nodename="burley_a_minus_033_pow4" />
+      <input name="in2" type="float" value="100.0" />
+    </multiply>
+    <add name="burley_s_dmfp" type="vector3">
+      <input name="in1" type="vector3" nodename="burley_s_dmfp_a" />
+      <input name="in2" type="float" value="3.5" />
+    </add>
+    <divide name="burley_factor" type="vector3">
+      <input name="in1" type="vector3" nodename="burley_s_mfp" />
+      <input name="in2" type="vector3" nodename="burley_s_dmfp" />
+    </divide>
+
+    <!-- Select the radius conversion by sssMode; Diffusion Burley (mean free path) uses the radius directly -->
+    <switch name="mfp_factor" type="vector3">
+      <input name="in1" type="vector3" nodename="pathtraced_factor" />
+      <input name="in2" type="vector3" nodename="pathtraced_factor" />
+      <input name="in3" type="vector3" nodename="burley_factor" />
+      <input name="in4" type="vector3" value="1.0, 1.0, 1.0" />
+      <input name="which" type="integer" interfacename="sssMode" />
+    </switch>
+    <multiply name="mfp" type="vector3">
+      <input name="in1" type="vector3" nodename="radius_vector" />
+      <input name="in2" type="vector3" nodename="mfp_factor" />
+    </multiply>
+    <convert name="mfp_color" type="color3">
+      <input name="in" type="vector3" nodename="mfp" />
+    </convert>
+
+    <!-- Per-channel blend towards a Lambertian response for radii below 1e-3 scene units -->
+    <multiply name="diffuse_ratio" type="vector3">
+      <input name="in1" type="vector3" nodename="radius_vector" />
+      <input name="in2" type="float" value="1000.0" />
+    </multiply>
+    <subtract name="diffuse_weight_unclamped" type="vector3">
+      <input name="in1" type="vector3" value="1.0, 1.0, 1.0" />
+      <input name="in2" type="vector3" nodename="diffuse_ratio" />
+    </subtract>
+    <clamp name="diffuse_weight" type="vector3">
+      <input name="in" type="vector3" nodename="diffuse_weight_unclamped" />
+    </clamp>
+    <convert name="diffuse_weight_color" type="color3">
+      <input name="in" type="vector3" nodename="diffuse_weight" />
+    </convert>
+    <subtract name="subsurface_weight_color" type="color3">
+      <input name="in1" type="color3" value="1.0, 1.0, 1.0" />
+      <input name="in2" type="color3" nodename="diffuse_weight_color" />
+    </subtract>
+    <multiply name="diffuse_color" type="color3">
+      <input name="in1" type="color3" interfacename="color" />
+      <input name="in2" type="color3" nodename="diffuse_weight_color" />
+    </multiply>
+    <multiply name="subsurface_color" type="color3">
+      <input name="in1" type="color3" interfacename="color" />
+      <input name="in2" type="color3" nodename="subsurface_weight_color" />
+    </multiply>
+
+    <!-- Reflection mode -->
     <subsurface_bsdf name="subsurface_bsdf" type="BSDF">
       <input name="weight" type="float" value="1.0" />
-      <input name="color" type="color3" interfacename="color" />
-      <input name="radius" type="color3" nodename="subsurface_multiply_unitlength" />
+      <input name="color" type="color3" nodename="subsurface_color" />
+      <input name="radius" type="color3" nodename="mfp_color" />
       <input name="anisotropy" type="float" interfacename="sssAnisotropy" />
       <input name="normal" type="vector3" interfacename="normal" />
     </subsurface_bsdf>
+    <oren_nayar_diffuse_bsdf name="diffuse_bsdf" type="BSDF">
+      <input name="weight" type="float" value="1.0" />
+      <input name="color" type="color3" nodename="diffuse_color" />
+      <input name="normal" type="vector3" interfacename="normal" />
+    </oren_nayar_diffuse_bsdf>
+    <add name="reflection_bsdf" type="BSDF">
+      <input name="in1" type="BSDF" nodename="subsurface_bsdf" />
+      <input name="in2" type="BSDF" nodename="diffuse_bsdf" />
+    </add>
+
+    <!-- Transmission mode: diffuse transmission, for light inside the object -->
+    <translucent_bsdf name="transmission_bsdf" type="BSDF">
+      <input name="weight" type="float" value="1.0" />
+      <input name="color" type="color3" interfacename="color" />
+      <input name="normal" type="vector3" interfacename="normal" />
+    </translucent_bsdf>
+
+    <ifequal name="transmission_mode" type="float">
+      <input name="value1" type="integer" interfacename="mode" />
+      <input name="value2" type="integer" value="1" />
+      <input name="in1" type="float" value="1.0" />
+      <input name="in2" type="float" value="0.0" />
+    </ifequal>
+    <mix name="sss_bsdf" type="BSDF">
+      <input name="fg" type="BSDF" nodename="transmission_bsdf" />
+      <input name="bg" type="BSDF" nodename="reflection_bsdf" />
+      <input name="mix" type="float" nodename="transmission_mode" />
+    </mix>
 
     <!-- Output -->
-    <output name="out" type="BSDF" nodename="subsurface_bsdf" />
+    <output name="out" type="BSDF" nodename="sss_bsdf" />
 
   </nodegraph>
 </materialx>

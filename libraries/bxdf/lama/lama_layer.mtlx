@@ -14,14 +14,20 @@
     <output name="out" type="BSDF" />
   </nodedef>
   <nodegraph name="NG_lama_layer_bsdf" nodedef="ND_lama_layer_bsdf">
-    <multiply name="mul" type="BSDF">
-      <input name="in1" type="BSDF" interfacename="materialTop" />
-      <input name="in2" type="float" interfacename="topMix" />
-    </multiply>
+    <!-- Top mix is a linear interpolation between the base alone and the full layering, so that
+         it scales both the response of the top and its occlusion of the base. -->
+    <clamp name="top_mix_clamped" type="float">
+      <input name="in" type="float" interfacename="topMix" />
+    </clamp>
     <layer name="layer" type="BSDF">
-      <input name="top" type="BSDF" nodename="mul" />
+      <input name="top" type="BSDF" interfacename="materialTop" />
       <input name="base" type="BSDF" interfacename="materialBase" />
     </layer>
-    <output name="out" type="BSDF" nodename="layer" />
+    <mix name="top_mix" type="BSDF">
+      <input name="fg" type="BSDF" nodename="layer" />
+      <input name="bg" type="BSDF" interfacename="materialBase" />
+      <input name="mix" type="float" nodename="top_mix_clamped" />
+    </mix>
+    <output name="out" type="BSDF" nodename="top_mix" />
   </nodegraph>
 </materialx>

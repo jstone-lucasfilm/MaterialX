@@ -13,8 +13,59 @@
   </nodedef>
 
   <nodegraph name="NG_lama_translucent" nodedef="ND_lama_translucent">
+    <!-- The angular shape of the rough Oren-Nayar transmission lobe is not representable with translucent_bsdf,
+         so its energy is approximated instead.  Without compensation, the color is scaled by the average albedo
+         of the Lama Oren-Nayar lobe, fitted as a quartic polynomial in roughness. -->
+    <clamp name="roughness_clamped" type="float">
+      <input name="in" type="float" interfacename="roughness" />
+    </clamp>
+    <multiply name="albedo_a" type="float">
+      <input name="in1" type="float" nodename="roughness_clamped" />
+      <input name="in2" type="float" value="1.53128" />
+    </multiply>
+    <add name="albedo_b" type="float">
+      <input name="in1" type="float" nodename="albedo_a" />
+      <input name="in2" type="float" value="-2.37659" />
+    </add>
+    <multiply name="albedo_c" type="float">
+      <input name="in1" type="float" nodename="albedo_b" />
+      <input name="in2" type="float" nodename="roughness_clamped" />
+    </multiply>
+    <add name="albedo_d" type="float">
+      <input name="in1" type="float" nodename="albedo_c" />
+      <input name="in2" type="float" value="0.60649" />
+    </add>
+    <multiply name="albedo_e" type="float">
+      <input name="in1" type="float" nodename="albedo_d" />
+      <input name="in2" type="float" nodename="roughness_clamped" />
+    </multiply>
+    <add name="albedo_f" type="float">
+      <input name="in1" type="float" nodename="albedo_e" />
+      <input name="in2" type="float" value="0.00846" />
+    </add>
+    <multiply name="albedo_g" type="float">
+      <input name="in1" type="float" nodename="albedo_f" />
+      <input name="in2" type="float" nodename="roughness_clamped" />
+    </multiply>
+    <add name="albedo_h" type="float">
+      <input name="in1" type="float" nodename="albedo_g" />
+      <input name="in2" type="float" value="0.99606" />
+    </add>
+    <min name="average_albedo" type="float">
+      <input name="in1" type="float" nodename="albedo_h" />
+      <input name="in2" type="float" value="1.0" />
+    </min>
+    <mix name="albedo_scale" type="float">
+      <input name="fg" type="float" value="1.0" />
+      <input name="bg" type="float" nodename="average_albedo" />
+      <input name="mix" type="float" interfacename="energyCompensation" />
+    </mix>
+    <multiply name="translucent_color" type="color3">
+      <input name="in1" type="color3" interfacename="color" />
+      <input name="in2" type="float" nodename="albedo_scale" />
+    </multiply>
     <translucent_bsdf name="translucent_bsdf1" type="BSDF">
-      <input name="color" type="color3" interfacename="color" />
+      <input name="color" type="color3" nodename="translucent_color" />
       <input name="normal" type="vector3" interfacename="normal" />
     </translucent_bsdf>
     <output name="out" type="BSDF" nodename="translucent_bsdf1" />

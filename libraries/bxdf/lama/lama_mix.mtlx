@@ -12,10 +12,13 @@
     <output name="out" type="BSDF" />
   </nodedef>
   <nodegraph name="NG_lama_mix_bsdf" nodedef="ND_lama_mix_bsdf">
+    <clamp name="mix_clamped" type="float">
+      <input name="in" type="float" interfacename="mix" />
+    </clamp>
     <mix name="mix" type="BSDF">
       <input name="fg" type="BSDF" interfacename="material2" />
       <input name="bg" type="BSDF" interfacename="material1" />
-      <input name="mix" type="float" interfacename="mix" />
+      <input name="mix" type="float" nodename="mix_clamped" />
     </mix>
     <output name="out" type="BSDF" nodename="mix" />
   </nodegraph>
@@ -31,10 +34,13 @@
     <output name="out" type="EDF" />
   </nodedef>
   <nodegraph name="NG_lama_mix_edf" nodedef="ND_lama_mix_edf">
+    <clamp name="mix_clamped" type="float">
+      <input name="in" type="float" interfacename="mix" />
+    </clamp>
     <mix name="mix" type="EDF">
       <input name="fg" type="EDF" interfacename="material2" />
       <input name="bg" type="EDF" interfacename="material1" />
-      <input name="mix" type="float" interfacename="mix" />
+      <input name="mix" type="float" nodename="mix_clamped" />
     </mix>
     <output name="out" type="EDF" nodename="mix" />
   </nodegraph>

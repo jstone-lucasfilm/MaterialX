@@ -65,18 +65,22 @@
     </switch>
 
     <!-- Exponent -->
+    <max name="reflectivity_profile_clamped" type="float">
+      <input name="in1" type="float" interfacename="reflectivityProfile" />
+      <input name="in2" type="float" value="0.000001" />
+    </max>
     <divide name="exponent" type="float">
       <input name="in1" type="float" value="1" />
-      <input name="in2" type="float" interfacename="reflectivityProfile" />
+      <input name="in2" type="float" nodename="reflectivity_profile_clamped" />
     </divide>
 
-    <!-- Roughness -->
-    <ifgreater name="anisotropy_switch" type="float">
+    <!-- Roughness: a non-negative anisotropy is the absolute roughness along the bitangent -->
+    <ifgreatereq name="anisotropy_switch" type="float">
       <input name="value1" type="float" interfacename="anisotropy" />
       <input name="value2" type="float" value="0.0" />
       <input name="in1" type="float" interfacename="anisotropy" />
       <input name="in2" type="float" interfacename="roughness" />
-    </ifgreater>
+    </ifgreatereq>
     <combine2 name="roughness_linear" type="vector2">
       <input name="in1" type="float" interfacename="roughness" />
       <input name="in2" type="float" nodename="anisotropy_switch" />
@@ -87,12 +91,15 @@
     </power>
     <max name="roughness_anisotropic_squared_clamped" type="vector2">
       <input name="in1" type="vector2" nodename="roughness_anisotropic_squared" />
-      <input name="in2" type="float" value="0.000001" />
+      <input name="in2" type="float" value="0.0001" />
     </max>
 
     <!-- Tangent -->
+    <clamp name="tangent_rotate_clamped" type="float">
+      <input name="in" type="float" interfacename="anisotropyRotation" />
+    </clamp>
     <multiply name="tangent_rotate_degree" type="float">
-      <input name="in1" type="float" interfacename="anisotropyRotation" />
+      <input name="in1" type="float" nodename="tangent_rotate_clamped" />
       <input name="in2" type="float" value="-360" />
     </multiply>
     <rotate3d name="tangent_rotate" type="vector3">
@@ -104,20 +111,46 @@
       <input name="in" type="vector3" nodename="tangent_rotate" />
     </normalize>
 
-    <!-- Interior -->
-    <divide name="absorption" type="color3">
-      <input name="in1" type="color3" interfacename="absorptionColor" />
-      <input name="in2" type="float" interfacename="absorptionRadius" />
+    <!-- Interior: extinction is -ln(absorptionColor) / absorptionRadius, and scatterColor is the single-scattering albedo -->
+    <clamp name="absorption_color_clamped" type="color3">
+      <input name="in" type="color3" interfacename="absorptionColor" />
+      <input name="low" type="float" value="0.00001" />
+    </clamp>
+    <convert name="absorption_color_vector" type="vector3">
+      <input name="in" type="color3" nodename="absorption_color_clamped" />
+    </convert>
+    <ln name="absorption_color_ln" type="vector3">
+      <input name="in" type="vector3" nodename="absorption_color_vector" />
+    </ln>
+    <max name="absorption_radius_clamped" type="float">
+      <input name="in1" type="float" interfacename="absorptionRadius" />
+      <input name="in2" type="float" value="0.00001" />
+    </max>
+    <divide name="extinction_negated" type="vector3">
+      <input name="in1" type="vector3" nodename="absorption_color_ln" />
+      <input name="in2" type="float" nodename="absorption_radius_clamped" />
     </divide>
-    <convert name="absorption_vector" type="vector3">
-      <input name="in" type="color3" nodename="absorption" />
-    </convert>
-    <convert name="scatter_vector" type="vector3">
+    <multiply name="extinction" type="vector3">
+      <input name="in1" type="vector3" nodename="extinction_negated" />
+      <input name="in2" type="float" value="-1.0" />
+    </multiply>
+    <clamp name="scatter_albedo" type="color3">
       <input name="in" type="color3" interfacename="scatterColor" />
+    </clamp>
+    <convert name="scatter_albedo_vector" type="vector3">
+      <input name="in" type="color3" nodename="scatter_albedo" />
     </convert>
+    <multiply name="scattering" type="vector3">
+      <input name="in1" type="vector3" nodename="extinction" />
+      <input name="in2" type="vector3" nodename="scatter_albedo_vector" />
+    </multiply>
+    <subtract name="absorption" type="vector3">
+      <input name="in1" type="vector3" nodename="extinction" />
+      <input name="in2" type="vector3" nodename="scattering" />
+    </subtract>
     <anisotropic_vdf name="interior_vdf" type="VDF">
-      <input name="absorption" type="vector3" nodename="absorption_vector" />
-      <input name="scattering" type="vector3" nodename="scatter_vector" />
+      <input name="absorption" type="vector3" nodename="absorption" />
+      <input name="scattering" type="vector3" nodename="scattering" />
       <input name="anisotropy" type="float" interfacename="scatterAnisotropy" />
     </anisotropic_vdf>
 

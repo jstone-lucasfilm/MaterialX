@@ -17,21 +17,47 @@
       <input name="in1" type="float" interfacename="roughness" />
       <input name="in2" type="float" interfacename="roughness" />
     </multiply>
-    <multiply name="half_roughness_squared" type="float">
+
+    <!-- Uncompensated lobe: Lama Oren-Nayar uses sigma = (pi / 2) * roughness^2 -->
+    <multiply name="sigma_uncompensated_unclamped" type="float">
       <input name="in1" type="float" nodename="roughness_squared" />
-      <input name="in2" type="float" value="0.5" />
+      <input name="in2" type="float" value="1.5707963" />
     </multiply>
+    <min name="sigma_uncompensated" type="float">
+      <input name="in1" type="float" nodename="sigma_uncompensated_unclamped" />
+      <input name="in2" type="float" value="1.0" />
+    </min>
+
+    <!-- Compensated lobe: fitted remap from Lama roughness to EON roughness,
+         sigma = 1.7 * roughness^2 / (1 + 1.4 * roughness^2), matching the energy-compensated Lama lobe -->
+    <multiply name="sigma_compensated_num" type="float">
+      <input name="in1" type="float" nodename="roughness_squared" />
+      <input name="in2" type="float" value="1.7" />
+    </multiply>
+    <multiply name="sigma_compensated_den_a" type="float">
+      <input name="in1" type="float" nodename="roughness_squared" />
+      <input name="in2" type="float" value="1.4" />
+    </multiply>
+    <add name="sigma_compensated_den" type="float">
+      <input name="in1" type="float" nodename="sigma_compensated_den_a" />
+      <input name="in2" type="float" value="1.0" />
+    </add>
+    <divide name="sigma_compensated" type="float">
+      <input name="in1" type="float" nodename="sigma_compensated_num" />
+      <input name="in2" type="float" nodename="sigma_compensated_den" />
+    </divide>
+
     <oren_nayar_diffuse_bsdf name="oren_nayar_uncompensated" type="BSDF">
       <input name="weight" type="float" value="1.0" />
       <input name="color" type="color3" interfacename="color" />
-      <input name="roughness" type="float" nodename="half_roughness_squared" />
+      <input name="roughness" type="float" nodename="sigma_uncompensated" />
       <input name="normal" type="vector3" interfacename="normal" />
       <input name="energy_compensation" type="boolean" value="false" />
     </oren_nayar_diffuse_bsdf>
     <oren_nayar_diffuse_bsdf name="oren_nayar_compensated" type="BSDF">
       <input name="weight" type="float" value="1.0" />
       <input name="color" type="color3" interfacename="color" />
-      <input name="roughness" type="float" nodename="half_roughness_squared" />
+      <input name="roughness" type="float" nodename="sigma_compensated" />
       <input name="normal" type="vector3" interfacename="normal" />
       <input name="energy_compensation" type="boolean" value="true" />
     </oren_nayar_diffuse_bsdf>

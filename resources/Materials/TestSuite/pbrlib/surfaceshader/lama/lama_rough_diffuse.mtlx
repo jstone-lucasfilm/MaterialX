@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="acescg">
+
+  <!-- Rough LamaDiffuse without energy compensation -->
+  <LamaDiffuse name="LamaDiffuseUncompensated" type="BSDF">
+    <input name="color" type="color3" value="0.8, 0.5, 0.3" />
+    <input name="roughness" type="float" value="1.0" />
+    <input name="energyCompensation" type="float" value="0.0" />
+  </LamaDiffuse>
+  <surface name="LamaDiffuseUncompensatedSurface" type="surfaceshader">
+    <input name="bsdf" type="BSDF" nodename="LamaDiffuseUncompensated" />
+  </surface>
+  <surfacematerial name="LamaDiffuseUncompensatedTest" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="LamaDiffuseUncompensatedSurface" />
+  </surfacematerial>
+
+  <!-- Rough LamaDiffuse with energy compensation -->
+  <LamaDiffuse name="LamaDiffuseCompensated" type="BSDF">
+    <input name="color" type="color3" value="0.8, 0.5, 0.3" />
+    <input name="roughness" type="float" value="1.0" />
+    <input name="energyCompensation" type="float" value="1.0" />
+  </LamaDiffuse>
+  <surface name="LamaDiffuseCompensatedSurface" type="surfaceshader">
+    <input name="bsdf" type="BSDF" nodename="LamaDiffuseCompensated" />
+  </surface>
+  <surfacematerial name="LamaDiffuseCompensatedTest" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="LamaDiffuseCompensatedSurface" />
+  </surfacematerial>
+
+  <!-- Rough LamaTranslucent without energy compensation -->
+  <LamaTranslucent name="LamaTranslucentRough" type="BSDF">
+    <input name="color" type="color3" value="0.8, 0.5, 0.3" />
+    <input name="roughness" type="float" value="1.0" />
+    <input name="energyCompensation" type="float" value="0.0" />
+  </LamaTranslucent>
+  <surface name="LamaTranslucentRoughSurface" type="surfaceshader">
+    <input name="bsdf" type="BSDF" nodename="LamaTranslucentRough" />
+  </surface>
+  <surfacematerial name="LamaTranslucentRoughTest" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="LamaTranslucentRoughSurface" />
+  </surfacematerial>
+
+</materialx>

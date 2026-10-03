@@ -4,7 +4,7 @@
     <input name="tint" type="color3" value="1, 1, 1" uiname="Tint" uifolder="Main"
            doc="Overall color multiplier. It should be used with parsimony, as a non-white value breaks physicality. The preferred way to define the color of a conductor is through the Fresnel attributes right below." />
     <input name="fresnelMode" type="integer" uniform="true" enum="Artistic,Scientific" enumvalues="0,1" value="0" uiname="Fresnel Mode" uifolder="Main"
-           doc="Switches the Fresnel between Artistic and Scientific parameters. The Artistic mode offers reflectivity in the normal direction and reflectivity90 at the grazing angle. The Scientific mode provides an index of refraction for each rgb component. Note that IOR is only used to calculate the reflectivity value used by the Schlick approximation. When reflectivity90 is 1, then both modes achieve identical results, as one can be mapped to the other." />
+           doc="Switches the Fresnel parameterization between Artistic and Scientific mode. The Artistic mode offers two colors, one defining the reflectivity in the normal direction, and the other when going towards grazing angles. The Scientific mode proposes an index of refraction and its imaginary counterpart, also called extinction coefficient. Both parameterizations can achieve identical results, as one can be mapped to the other." />
     <input name="IOR" type="vector3" value="0.180000007153,0.419999986887,1.37000000477" uiname="IOR" uifolder="Main"
            doc="Index of refraction (often denoted by eta), defining the color reflected by the surface in the normal direction." />
     <input name="extinction" type="vector3" value="3.42000007629,2.34999990463,1.76999998093" uiname="Extinction" uifolder="Main"
@@ -23,15 +23,183 @@
            doc="Overrides the surface tangent as the anisotropy direction." />
     <input name="anisotropyRotation" type="float" value="0.0" uisoftmin="0.0" uisoftmax="1.0"  uiname="Rotation" uifolder="Anisotropy"
            doc="Rotates the anisotropy direction (possibly overridden by the previous attribute) around the normal, from 0 to 360 degrees." />
+    <input name="edgeColorMode" type="integer" uniform="true" enum="Belcour,Gulbrandsen" enumvalues="0,1" value="0" uiname="Edge Color Mode" uifolder="Advanced"
+           doc="Switches the edge color parameterization. Belcour is an improved parameterization that provides a more linear response. Gulbrandsen is the common edge tint parameterization." />
     <output name="out" type="BSDF" />
   </nodedef>
 
   <nodegraph name="IMPL_lama_conductor" nodedef="ND_lama_conductor">
 
+    <!-- Edge color: in Belcour mode, edgeColor is remapped to the equivalent Gulbrandsen edge tint g.
+         The remapping fits the 64x64 Belcour table used by RenderMan as g = 1 - exp(P(x, b)), where
+         x = -ln(1 - min(reflectivity, 0.99)), b = edgeColor, and P is a bicubic polynomial. -->
+    <convert name="belcour_r" type="vector3">
+      <input name="in" type="color3" interfacename="reflectivity" />
+    </convert>
+    <min name="belcour_r_clamped" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_r" />
+      <input name="in2" type="float" value="0.99" />
+    </min>
+    <subtract name="belcour_r_inverse" type="vector3">
+      <input name="in1" type="vector3" value="1.0, 1.0, 1.0" />
+      <input name="in2" type="vector3" nodename="belcour_r_clamped" />
+    </subtract>
+    <ln name="belcour_r_ln" type="vector3">
+      <input name="in" type="vector3" nodename="belcour_r_inverse" />
+    </ln>
+    <multiply name="belcour_x" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_r_ln" />
+      <input name="in2" type="float" value="-1.0" />
+    </multiply>
+    <convert name="belcour_b" type="vector3">
+      <input name="in" type="color3" interfacename="edgeColor" />
+    </convert>
+    <!-- q_i(b) = ((c_i3 * b + c_i2) * b + c_i1) * b + c_i0 -->
+    <multiply name="belcour_q0_a" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_b" />
+      <input name="in2" type="float" value="-10.61764" />
+    </multiply>
+    <add name="belcour_q0_b" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_q0_a" />
+      <input name="in2" type="float" value="11.280808" />
+    </add>
+    <multiply name="belcour_q0_c" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_q0_b" />
+      <input name="in2" type="vector3" nodename="belcour_b" />
+    </multiply>
+    <add name="belcour_q0_d" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_q0_c" />
+      <input name="in2" type="float" value="-5.353571" />
+    </add>
+    <multiply name="belcour_q0_e" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_q0_d" />
+      <input name="in2" type="vector3" nodename="belcour_b" />
+    </multiply>
+    <add name="belcour_q0" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_q0_e" />
+      <input name="in2" type="float" value="0.187983" />
+    </add>
+    <multiply name="belcour_q1_a" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_b" />
+      <input name="in2" type="float" value="3.099878" />
+    </multiply>
+    <add name="belcour_q1_b" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_q1_a" />
+      <input name="in2" type="float" value="-4.112688" />
+    </add>
+    <multiply name="belcour_q1_c" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_q1_b" />
+      <input name="in2" type="vector3" nodename="belcour_b" />
+    </multiply>
+    <add name="belcour_q1_d" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_q1_c" />
+      <input name="in2" type="float" value="-0.586831" />
+    </add>
+    <multiply name="belcour_q1_e" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_q1_d" />
+      <input name="in2" type="vector3" nodename="belcour_b" />
+    </multiply>
+    <add name="belcour_q1" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_q1_e" />
+      <input name="in2" type="float" value="0.127273" />
+    </add>
+    <multiply name="belcour_q2_a" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_b" />
+      <input name="in2" type="float" value="-5.211545" />
+    </multiply>
+    <add name="belcour_q2_b" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_q2_a" />
+      <input name="in2" type="float" value="7.824858" />
+    </add>
+    <multiply name="belcour_q2_c" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_q2_b" />
+      <input name="in2" type="vector3" nodename="belcour_b" />
+    </multiply>
+    <add name="belcour_q2_d" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_q2_c" />
+      <input name="in2" type="float" value="-2.899866" />
+    </add>
+    <multiply name="belcour_q2_e" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_q2_d" />
+      <input name="in2" type="vector3" nodename="belcour_b" />
+    </multiply>
+    <add name="belcour_q2" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_q2_e" />
+      <input name="in2" type="float" value="-0.082529" />
+    </add>
+    <multiply name="belcour_q3_a" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_b" />
+      <input name="in2" type="float" value="1.12015" />
+    </multiply>
+    <add name="belcour_q3_b" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_q3_a" />
+      <input name="in2" type="float" value="-1.594804" />
+    </add>
+    <multiply name="belcour_q3_c" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_q3_b" />
+      <input name="in2" type="vector3" nodename="belcour_b" />
+    </multiply>
+    <add name="belcour_q3_d" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_q3_c" />
+      <input name="in2" type="float" value="0.611379" />
+    </add>
+    <multiply name="belcour_q3_e" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_q3_d" />
+      <input name="in2" type="vector3" nodename="belcour_b" />
+    </multiply>
+    <add name="belcour_q3" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_q3_e" />
+      <input name="in2" type="float" value="-0.03641" />
+    </add>
+    <!-- P = ((q3 * x + q2) * x + q1) * x + q0 -->
+    <multiply name="belcour_p_a" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_q3" />
+      <input name="in2" type="vector3" nodename="belcour_x" />
+    </multiply>
+    <add name="belcour_p_b" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_p_a" />
+      <input name="in2" type="vector3" nodename="belcour_q2" />
+    </add>
+    <multiply name="belcour_p_c" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_p_b" />
+      <input name="in2" type="vector3" nodename="belcour_x" />
+    </multiply>
+    <add name="belcour_p_d" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_p_c" />
+      <input name="in2" type="vector3" nodename="belcour_q1" />
+    </add>
+    <multiply name="belcour_p_e" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_p_d" />
+      <input name="in2" type="vector3" nodename="belcour_x" />
+    </multiply>
+    <add name="belcour_p" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_p_e" />
+      <input name="in2" type="vector3" nodename="belcour_q0" />
+    </add>
+    <min name="belcour_p_clamped" type="vector3">
+      <input name="in1" type="vector3" nodename="belcour_p" />
+      <input name="in2" type="float" value="0.0" />
+    </min>
+    <exp name="belcour_p_exp" type="vector3">
+      <input name="in" type="vector3" nodename="belcour_p_clamped" />
+    </exp>
+    <subtract name="belcour_g" type="vector3">
+      <input name="in1" type="vector3" value="1.0, 1.0, 1.0" />
+      <input name="in2" type="vector3" nodename="belcour_p_exp" />
+    </subtract>
+    <convert name="belcour_g_color" type="color3">
+      <input name="in" type="vector3" nodename="belcour_g" />
+    </convert>
+    <switch name="edge_tint" type="color3">
+      <input name="in1" type="color3" nodename="belcour_g_color" />
+      <input name="in2" type="color3" interfacename="edgeColor" />
+      <input name="which" type="integer" interfacename="edgeColorMode" />
+    </switch>
+
     <!-- IOR -->
     <artistic_ior name="artistic_ior" type="multioutput">
       <input name="reflectivity" type="color3" interfacename="reflectivity" />
-      <input name="edge_color" type="color3" interfacename="edgeColor" />
+      <input name="edge_color" type="color3" nodename="edge_tint" />
     </artistic_ior>
     <convert name="convert_ior" type="color3">
       <input name="in" type="vector3" interfacename="IOR" />
@@ -82,12 +250,15 @@
     </power>
     <max name="roughness_anisotropic_squared_clamped" type="vector2">
       <input name="in1" type="vector2" nodename="roughness_anisotropic_squared" />
-      <input name="in2" type="float" value="0.000001" />
+      <input name="in2" type="float" value="0.0001" />
     </max>
 
     <!-- Tangent -->
+    <clamp name="tangent_rotate_clamped" type="float">
+      <input name="in" type="float" interfacename="anisotropyRotation" />
+    </clamp>
     <multiply name="tangent_rotate_degree" type="float">
-      <input name="in1" type="float" interfacename="anisotropyRotation" />
+      <input name="in1" type="float" nodename="tangent_rotate_clamped" />
       <input name="in2" type="float" value="-360" />
     </multiply>
     <rotate3d name="tangent_rotate" type="vector3">

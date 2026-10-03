@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="acescg">
+
+  <!-- LamaSSS with a skin-like diffuse mean free path and Pixar albedo inversion -->
+  <LamaSSS name="LamaSSSPixar" type="BSDF">
+    <input name="color" type="color3" value="0.8, 0.5, 0.35" />
+    <input name="sssRadius" type="color3" value="3.67, 1.37, 0.68" />
+    <input name="sssScale" type="float" value="1.0" />
+    <input name="sssMode" type="integer" value="0" />
+    <input name="sssUnitLength" type="float" value="0.1" />
+    <input name="albedoInversionMethod" type="integer" value="0" />
+  </LamaSSS>
+  <surface name="LamaSSSPixarSurface" type="surfaceshader">
+    <input name="bsdf" type="BSDF" nodename="LamaSSSPixar" />
+  </surface>
+  <surfacematerial name="LamaSSSPixarTest" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="LamaSSSPixarSurface" />
+  </surfacematerial>
+
+  <!-- LamaSSS with Burley diffusion -->
+  <LamaSSS name="LamaSSSBurley" type="BSDF">
+    <input name="color" type="color3" value="0.8, 0.5, 0.35" />
+    <input name="sssRadius" type="color3" value="3.67, 1.37, 0.68" />
+    <input name="sssMode" type="integer" value="2" />
+    <input name="sssUnitLength" type="float" value="0.1" />
+  </LamaSSS>
+  <surface name="LamaSSSBurleySurface" type="surfaceshader">
+    <input name="bsdf" type="BSDF" nodename="LamaSSSBurley" />
+  </surface>
+  <surfacematerial name="LamaSSSBurleyTest" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="LamaSSSBurleySurface" />
+  </surfacematerial>
+
+  <!-- LamaSSS in transmission mode -->
+  <LamaSSS name="LamaSSSTransmission" type="BSDF">
+    <input name="color" type="color3" value="0.8, 0.5, 0.35" />
+    <input name="sssRadius" type="color3" value="3.67, 1.37, 0.68" />
+    <input name="sssUnitLength" type="float" value="0.1" />
+    <input name="mode" type="integer" value="1" />
+  </LamaSSS>
+  <surface name="LamaSSSTransmissionSurface" type="surfaceshader">
+    <input name="bsdf" type="BSDF" nodename="LamaSSSTransmission" />
+  </surface>
+  <surfacematerial name="LamaSSSTransmissionTest" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="LamaSSSTransmissionSurface" />
+  </surfacematerial>
+
+</materialx>

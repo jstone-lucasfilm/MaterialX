@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="acescg">
+
+  <!-- LamaDiffuse base -->
+  <LamaDiffuse name="LamaDiffuse" type="BSDF">
+    <input name="color" type="color3" value="0.6, 0.1, 0.1" />
+    <input name="roughness" type="float" value="0.3" />
+  </LamaDiffuse>
+
+  <!-- Dim LamaSheen top, which should only partially occlude the base -->
+  <LamaSheen name="LamaSheen" type="BSDF">
+    <input name="color" type="color3" value="0.2, 0.2, 0.3" />
+    <input name="roughness" type="float" value="0.4" />
+  </LamaSheen>
+
+  <!-- LamaConductor top, partially visible -->
+  <LamaConductor name="LamaConductor" type="BSDF">
+    <input name="roughness" type="float" value="0.2" />
+  </LamaConductor>
+
+  <!-- Sheen layered over diffuse -->
+  <LamaLayer name="LamaLayerSheen" type="BSDF">
+    <input name="materialTop" type="BSDF" nodename="LamaSheen" />
+    <input name="materialBase" type="BSDF" nodename="LamaDiffuse" />
+  </LamaLayer>
+  <surface name="LamaLayerSheenSurface" type="surfaceshader">
+    <input name="bsdf" type="BSDF" nodename="LamaLayerSheen" />
+  </surface>
+  <surfacematerial name="LamaLayerSheenTest" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="LamaLayerSheenSurface" />
+  </surfacematerial>
+
+  <!-- Conductor layered over diffuse with a partial top mix -->
+  <LamaLayer name="LamaLayerHalf" type="BSDF">
+    <input name="materialTop" type="BSDF" nodename="LamaConductor" />
+    <input name="materialBase" type="BSDF" nodename="LamaDiffuse" />
+    <input name="topMix" type="float" value="0.5" />
+  </LamaLayer>
+  <surface name="LamaLayerHalfSurface" type="surfaceshader">
+    <input name="bsdf" type="BSDF" nodename="LamaLayerHalf" />
+  </surface>
+  <surfacematerial name="LamaLayerHalfTest" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="LamaLayerHalfSurface" />
+  </surfacematerial>
+
+  <!-- Conductor layered over diffuse with a zero top mix, which should match the diffuse base alone -->
+  <LamaLayer name="LamaLayerZero" type="BSDF">
+    <input name="materialTop" type="BSDF" nodename="LamaConductor" />
+    <input name="materialBase" type="BSDF" nodename="LamaDiffuse" />
+    <input name="topMix" type="float" value="0.0" />
+  </LamaLayer>
+  <surface name="LamaLayerZeroSurface" type="surfaceshader">
+    <input name="bsdf" type="BSDF" nodename="LamaLayerZero" />
+  </surface>
+  <surfacematerial name="LamaLayerZeroTest" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="LamaLayerZeroSurface" />
+  </surfacematerial>
+
+</materialx>

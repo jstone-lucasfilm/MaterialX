@@ -7,6 +7,8 @@
            doc="Roughness of the sheen effect. Very rough sheen can be used to create a rough diffuse look (when combined with a diffuse node by a layer or mix)." />
     <input name="normal" type="vector3" defaultgeomprop="Nworld" uiname="Normal" uifolder="Main"
            doc="Shading normal, typically defined by bump or normal mapping. Defaults to the smooth surface normal if not set." />
+    <input name="energyCompensation" type="float" uniform="true" value="1.0" uimin="0.0" uimax="1.0" uiname="Energy Compensation" uifolder="Advanced"
+           doc="Indicates how much energy should be added to compensate for the loss inherent to the sheen model, ranging from no compensation at all, to the expected energy from multiple scattering between the micro-facets. This prevents overly dark results when roughness is high." />
     <output name="out" type="BSDF" />
   </nodedef>
 
@@ -26,12 +28,84 @@
       <input name="in2" type="float" value="2" />
     </power>
 
+    <!-- Energy compensation: 1 + energyCompensation * (1 / E0(roughness) - 1), where 1 / E0 is a
+         quintic fit to the Lama sheen albedo table, indexed by the unremapped roughness -->
+    <clamp name="roughness_clamped" type="float">
+      <input name="in" type="float" interfacename="roughness" />
+    </clamp>
+    <multiply name="compensation_a" type="float">
+      <input name="in1" type="float" nodename="roughness_clamped" />
+      <input name="in2" type="float" value="-4.135797" />
+    </multiply>
+    <add name="compensation_b" type="float">
+      <input name="in1" type="float" nodename="compensation_a" />
+      <input name="in2" type="float" value="10.664062" />
+    </add>
+    <multiply name="compensation_c" type="float">
+      <input name="in1" type="float" nodename="compensation_b" />
+      <input name="in2" type="float" nodename="roughness_clamped" />
+    </multiply>
+    <add name="compensation_d" type="float">
+      <input name="in1" type="float" nodename="compensation_c" />
+      <input name="in2" type="float" value="-5.452146" />
+    </add>
+    <multiply name="compensation_e" type="float">
+      <input name="in1" type="float" nodename="compensation_d" />
+      <input name="in2" type="float" nodename="roughness_clamped" />
+    </multiply>
+    <add name="compensation_f" type="float">
+      <input name="in1" type="float" nodename="compensation_e" />
+      <input name="in2" type="float" value="-4.941181" />
+    </add>
+    <multiply name="compensation_g" type="float">
+      <input name="in1" type="float" nodename="compensation_f" />
+      <input name="in2" type="float" nodename="roughness_clamped" />
+    </multiply>
+    <add name="compensation_h" type="float">
+      <input name="in1" type="float" nodename="compensation_g" />
+      <input name="in2" type="float" value="4.423259" />
+    </add>
+    <multiply name="compensation_i" type="float">
+      <input name="in1" type="float" nodename="compensation_h" />
+      <input name="in2" type="float" nodename="roughness_clamped" />
+    </multiply>
+    <add name="compensation_full" type="float">
+      <input name="in1" type="float" nodename="compensation_i" />
+      <input name="in2" type="float" value="0.570964" />
+    </add>
+    <mix name="compensation" type="float">
+      <input name="fg" type="float" nodename="compensation_full" />
+      <input name="bg" type="float" value="1.0" />
+      <input name="mix" type="float" interfacename="energyCompensation" />
+    </mix>
+
+    <!-- Sheen color drives the layering weight, so that the base is attenuated by color * albedo as in Lama -->
+    <multiply name="sheen_color" type="color3">
+      <input name="in1" type="color3" interfacename="color" />
+      <input name="in2" type="float" nodename="compensation" />
+    </multiply>
+    <maxcomponent name="sheen_color_max" type="float">
+      <input name="in" type="color3" nodename="sheen_color" />
+    </maxcomponent>
+    <clamp name="sheen_weight" type="float">
+      <input name="in" type="float" nodename="sheen_color_max" />
+    </clamp>
+    <max name="sheen_weight_safe" type="float">
+      <input name="in1" type="float" nodename="sheen_weight" />
+      <input name="in2" type="float" value="0.000001" />
+    </max>
+    <divide name="sheen_color_normalized" type="color3">
+      <input name="in1" type="color3" nodename="sheen_color" />
+      <input name="in2" type="float" nodename="sheen_weight_safe" />
+    </divide>
+
     <!-- BRDF -->
     <sheen_bsdf name="sheen_bsdf" type="BSDF">
-      <input name="weight" type="float" value="1.0" />
-      <input name="color" type="color3" interfacename="color" />
+      <input name="weight" type="float" nodename="sheen_weight" />
+      <input name="color" type="color3" nodename="sheen_color_normalized" />
       <input name="roughness" type="float" nodename="roughness_squared" />
       <input name="normal" type="vector3" interfacename="normal" />
+      <input name="mode" type="string" value="conty_kulla" />
     </sheen_bsdf>
 
     <!-- Output -->
