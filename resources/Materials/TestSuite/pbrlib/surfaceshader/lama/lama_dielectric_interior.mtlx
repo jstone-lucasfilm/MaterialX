@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="acescg">
+
+  <!-- LamaDielectric with an absorbing interior -->
+  <LamaDielectric name="LamaDielectricAbsorption" type="BSDF">
+    <input name="absorptionColor" type="color3" value="0.9, 0.5, 0.2" />
+    <input name="absorptionRadius" type="float" value="0.5" />
+    <input name="roughness" type="float" value="0.05" />
+  </LamaDielectric>
+  <surface name="LamaDielectricAbsorptionSurface" type="surfaceshader">
+    <input name="bsdf" type="BSDF" nodename="LamaDielectricAbsorption" />
+  </surface>
+  <surfacematerial name="LamaDielectricAbsorptionTest" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="LamaDielectricAbsorptionSurface" />
+  </surfacematerial>
+
+  <!-- LamaDielectric with a scattering interior and anisotropic roughness -->
+  <LamaDielectric name="LamaDielectricScatter" type="BSDF">
+    <input name="fresnelMode" type="integer" value="1" />
+    <input name="IOR" type="float" value="1.33" />
+    <input name="roughness" type="float" value="0.2" />
+    <input name="anisotropy" type="float" value="0.5" />
+    <input name="rotation" type="float" value="0.25" />
+    <input name="absorptionColor" type="color3" value="0.6, 0.7, 0.8" />
+    <input name="scatterColor" type="color3" value="0.8, 0.8, 0.8" />
+    <input name="scatterAnisotropy" type="float" value="0.3" />
+  </LamaDielectric>
+  <surface name="LamaDielectricScatterSurface" type="surfaceshader">
+    <input name="bsdf" type="BSDF" nodename="LamaDielectricScatter" />
+  </surface>
+  <surfacematerial name="LamaDielectricScatterTest" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="LamaDielectricScatterSurface" />
+  </surfacematerial>
+
+  <!-- LamaGeneralizedSchlick with an absorbing interior and absolute bitangent roughness -->
+  <LamaGeneralizedSchlick name="LamaGeneralizedSchlickInterior" type="BSDF">
+    <input name="reflectivity" type="color3" value="0.06, 0.05, 0.04" />
+    <input name="reflectivityProfile" type="float" value="0.3" />
+    <input name="roughness" type="float" value="0.1" />
+    <input name="anisotropy" type="float" value="0.4" />
+    <input name="absorptionColor" type="color3" value="0.3, 0.6, 0.9" />
+  </LamaGeneralizedSchlick>
+  <surface name="LamaGeneralizedSchlickInteriorSurface" type="surfaceshader">
+    <input name="bsdf" type="BSDF" nodename="LamaGeneralizedSchlickInterior" />
+  </surface>
+  <surfacematerial name="LamaGeneralizedSchlickInteriorTest" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="LamaGeneralizedSchlickInteriorSurface" />
+  </surfacematerial>
+
+</materialx>
