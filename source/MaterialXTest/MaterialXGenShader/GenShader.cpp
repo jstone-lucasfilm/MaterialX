@@ -349,6 +349,114 @@ TEST_CASE("GenShader: Deterministic Generation", "[genshader]")
 #endif
 }
 
+#ifdef MATERIALX_BUILD_GEN_GLSL
+TEST_CASE("GenShader: Premultiplied BSDF Add", "[genshader]")
+{
+    mx::FileSearchPath searchPath = mx::getDefaultDataSearchPath();
+    mx::DocumentPtr libraries = mx::createDocument();
+    mx::loadLibraries({ "libraries" }, searchPath, libraries);
+
+    mx::GenContext context(mx::GlslShaderGenerator::create());
+    context.registerSourceCodeSearchPath(searchPath);
+    REQUIRE(context.getOptions().premultipliedBsdfAdd);
+
+    // Each graph contains a single BSDF mix node with a connected weight, and
+    // only mixes of two weighted BSDFs with no other consumers may be replaced
+    // by a premultiplied add, as other mixes would not preserve the response
+    // or the vertical-layering transmittance of the original graph.
+    const std::string docString = R"(<?xml version="1.0"?>
+      <materialx version="1.39">
+        <nodegraph name="weighted_bsdfs" type="surfaceshader">
+          <dot name="weight" type="float" />
+          <oren_nayar_diffuse_bsdf name="diffuse" type="BSDF" />
+          <conductor_bsdf name="conductor" type="BSDF" />
+          <mix name="mix" type="BSDF">
+            <input name="fg" type="BSDF" nodename="conductor" />
+            <input name="bg" type="BSDF" nodename="diffuse" />
+            <input name="mix" type="float" nodename="weight" />
+          </mix>
+          <surface name="surface" type="surfaceshader">
+            <input name="bsdf" type="BSDF" nodename="mix" />
+          </surface>
+          <output name="out" type="surfaceshader" nodename="surface" />
+        </nodegraph>
+        <nodegraph name="empty_bsdf" type="surfaceshader">
+          <dot name="weight" type="float" />
+          <conductor_bsdf name="conductor" type="BSDF" />
+          <mix name="mix" type="BSDF">
+            <input name="fg" type="BSDF" nodename="conductor" />
+            <input name="mix" type="float" nodename="weight" />
+          </mix>
+          <surface name="surface" type="surfaceshader">
+            <input name="bsdf" type="BSDF" nodename="mix" />
+          </surface>
+          <output name="out" type="surfaceshader" nodename="surface" />
+        </nodegraph>
+        <nodegraph name="unweighted_bsdf" type="surfaceshader">
+          <dot name="weight" type="float" />
+          <oren_nayar_diffuse_bsdf name="diffuse" type="BSDF" />
+          <conductor_bsdf name="conductor" type="BSDF" />
+          <multiply name="tinted" type="BSDF">
+            <input name="in1" type="BSDF" nodename="conductor" />
+            <input name="in2" type="color3" value="1, 0.5, 0.5" />
+          </multiply>
+          <mix name="mix" type="BSDF">
+            <input name="fg" type="BSDF" nodename="tinted" />
+            <input name="bg" type="BSDF" nodename="diffuse" />
+            <input name="mix" type="float" nodename="weight" />
+          </mix>
+          <surface name="surface" type="surfaceshader">
+            <input name="bsdf" type="BSDF" nodename="mix" />
+          </surface>
+          <output name="out" type="surfaceshader" nodename="surface" />
+        </nodegraph>
+        <nodegraph name="shared_bsdf" type="surfaceshader">
+          <dot name="weight" type="float" />
+          <oren_nayar_diffuse_bsdf name="diffuse" type="BSDF" />
+          <conductor_bsdf name="conductor" type="BSDF" />
+          <mix name="mix" type="BSDF">
+            <input name="fg" type="BSDF" nodename="conductor" />
+            <input name="bg" type="BSDF" nodename="diffuse" />
+            <input name="mix" type="float" nodename="weight" />
+          </mix>
+          <add name="add" type="BSDF">
+            <input name="in1" type="BSDF" nodename="mix" />
+            <input name="in2" type="BSDF" nodename="diffuse" />
+          </add>
+          <surface name="surface" type="surfaceshader">
+            <input name="bsdf" type="BSDF" nodename="add" />
+          </surface>
+          <output name="out" type="surfaceshader" nodename="surface" />
+        </nodegraph>
+      </materialx>)";
+    mx::DocumentPtr doc = mx::createDocument();
+    mx::readFromXmlString(doc, docString);
+    doc->setDataLibrary(libraries);
+    REQUIRE(doc->validate());
+
+    auto isRefactored = [&](const std::string& graphName)
+    {
+        mx::OutputPtr output = doc->getNodeGraph(graphName)->getOutput("out");
+        mx::ShaderPtr shader = context.getShaderGenerator().generate(graphName, output, context);
+        REQUIRE(shader);
+        bool hasMix = false;
+        bool hasPremultipliedAdd = false;
+        for (const mx::ShaderNode* node : shader->getGraph().getNodes())
+        {
+            hasMix |= (node->getName() == "mix");
+            hasPremultipliedAdd |= (node->getName() == "mix_add");
+        }
+        CHECK(hasMix != hasPremultipliedAdd);
+        return hasPremultipliedAdd;
+    };
+
+    CHECK(isRefactored("weighted_bsdfs"));
+    CHECK(!isRefactored("empty_bsdf"));
+    CHECK(!isRefactored("unweighted_bsdf"));
+    CHECK(!isRefactored("shared_bsdf"));
+}
+#endif
+
 void checkPixelDependencies(mx::DocumentPtr libraries, mx::GenContext& context)
 {
     mx::FileSearchPath searchPath = mx::getDefaultDataSearchPath();

@@ -36,65 +36,71 @@ bool isLayerWithMixTop(ShaderNode* node)
     return isBsdfMixNode(top->getConnection()->getNode());
 }
 
-// Fold a mix weight into one side of a BSDF mix node, inserting a multiply
-// node to combine the existing weight (connected or constant) with the mix
-// weight.  Return the upstream output to connect to the replacement add node.
-ShaderOutput* foldWeightIntoBsdf(ShaderGraph& graph, GenContext& context,
-                                 ShaderInput* bsdfInput, ShaderOutput* weightSource,
-                                 const string& namePrefix,
-                                 NodeDefPtr mulFloatDef, NodeDefPtr mulBsdfDef)
+// Return true if a mix weight can be folded into the BSDF connected to the
+// given input of a mix node.  Folding requires a BSDF with a weight input,
+// whose weight scales both its response and its vertical-layering
+// transmittance, and requires that the mix node be the sole consumer of the
+// BSDF, so that scaling its weight cannot affect other parts of the graph.
+bool canFoldWeightIntoBsdf(ShaderInput* bsdfInput)
 {
     ShaderOutput* bsdfUpstream = bsdfInput->getConnection();
     if (!bsdfUpstream)
     {
-        return nullptr;
+        return false;
+    }
+    if (bsdfUpstream->getConnections().size() != 1)
+    {
+        return false;
     }
 
+    // Exclude interface sockets of the enclosing graph, whose weight inputs
+    // cannot be rewired from within the graph.
+    ShaderNode* bsdfNode = bsdfUpstream->getNode();
+    if (bsdfNode->getParent() != bsdfInput->getNode()->getParent())
+    {
+        return false;
+    }
+    ShaderInput* weightInput = bsdfNode->getInput("weight");
+    return weightInput && weightInput->getType() == Type::FLOAT;
+}
+
+// Fold a mix weight into the BSDF connected to one side of a BSDF mix node,
+// inserting a multiply node to combine the existing weight (connected or
+// constant) with the mix weight.  Return the upstream output to connect to
+// the replacement add node.
+ShaderOutput* foldWeightIntoBsdf(ShaderGraph& graph, GenContext& context,
+                                 ShaderInput* bsdfInput, ShaderOutput* weightSource,
+                                 const string& namePrefix, NodeDefPtr mulFloatDef)
+{
+    ShaderOutput* bsdfUpstream = bsdfInput->getConnection();
     ShaderNode* bsdfNode = bsdfUpstream->getNode();
     ShaderInput* weightInput = bsdfNode->getInput("weight");
-    if (weightInput)
+
+    // Create a multiply node to combine existing weight with mix weight.
+    string mulName = namePrefix + "_weight";
+    ShaderNode* mulNode = graph.createNode(mulName, mulName, mulFloatDef, context);
+    ShaderInput* mulIn1 = mulNode->getInput("in1");
+    ShaderInput* mulIn2 = mulNode->getInput("in2");
+    if (mulIn1 && mulIn2)
     {
-        // Create a multiply node to combine existing weight with mix weight.
-        string mulName = namePrefix + "_weight";
-        ShaderNode* mulNode = graph.createNode(mulName, mulName, mulFloatDef, context);
-        ShaderInput* mulIn1 = mulNode->getInput("in1");
-        ShaderInput* mulIn2 = mulNode->getInput("in2");
-        if (mulIn1 && mulIn2)
+        ShaderOutput* existingSource = weightInput->getConnection();
+        if (existingSource)
         {
-            ShaderOutput* existingSource = weightInput->getConnection();
-            if (existingSource)
-            {
-                weightInput->breakConnection();
-                mulIn1->makeConnection(existingSource);
-            }
-            else if (weightInput->getValue())
-            {
-                mulIn1->setValue(weightInput->getValue());
-            }
-            else
-            {
-                mulIn1->setValue(Value::createValue<float>(1.0f));
-            }
-            mulIn2->makeConnection(weightSource);
-            weightInput->makeConnection(mulNode->getOutput());
+            weightInput->breakConnection();
+            mulIn1->makeConnection(existingSource);
         }
-        return bsdfUpstream;
-    }
-    else
-    {
-        // Wrap the BSDF with a BSDF*float multiply when no weight input exists.
-        string mulName = namePrefix + "_mul";
-        ShaderNode* mulNode = graph.createNode(mulName, mulName, mulBsdfDef, context);
-        ShaderInput* mulIn1 = mulNode->getInput("in1");
-        ShaderInput* mulIn2 = mulNode->getInput("in2");
-        if (mulIn1 && mulIn2)
+        else if (weightInput->getValue())
         {
-            mulIn1->makeConnection(bsdfUpstream);
-            mulIn2->makeConnection(weightSource);
-            return mulNode->getOutput();
+            mulIn1->setValue(weightInput->getValue());
         }
-        return bsdfUpstream;
+        else
+        {
+            mulIn1->setValue(Value::createValue<float>(1.0f));
+        }
+        mulIn2->makeConnection(weightSource);
+        weightInput->makeConnection(mulNode->getOutput());
     }
+    return bsdfUpstream;
 }
 
 } // anonymous namespace
@@ -179,21 +185,28 @@ size_t PremultipliedBsdfAddRefactor::execute(ShaderGraph& graph, GenContext& con
     ConstDocumentPtr doc = graph.getDocument();
     NodeDefPtr invertDef = doc->getNodeDef("ND_invert_float");
     NodeDefPtr mulFloatDef = doc->getNodeDef("ND_multiply_float");
-    NodeDefPtr mulBsdfDef = doc->getNodeDef("ND_multiply_bsdfF");
     NodeDefPtr addBsdfDef = doc->getNodeDef("ND_add_bsdf");
-    if (!invertDef || !mulFloatDef || !mulBsdfDef || !addBsdfDef)
+    if (!invertDef || !mulFloatDef || !addBsdfDef)
     {
         return 0;
     }
 
-    // Collect mix nodes with connected weights (avoid modifying the graph while iterating).
+    // Collect mix nodes with connected weights whose inputs can both absorb the
+    // mix weight (avoid modifying the graph while iterating).  The add node
+    // composes the transmittances of its inputs as T1 + T2 - 1, which matches
+    // the transmittance of the mix only when each input is a BSDF whose
+    // transmittance is scaled by its own weight, so other mix nodes are left
+    // unchanged.
     vector<ShaderNode*> mixNodes;
     for (ShaderNode* node : graph.getNodes())
     {
         if (isBsdfMixNode(node))
         {
             ShaderInput* mix = node->getInput("mix");
-            if (mix && mix->getConnection())
+            ShaderInput* fg = node->getInput("fg");
+            ShaderInput* bg = node->getInput("bg");
+            if (mix && mix->getConnection() && fg && bg &&
+                canFoldWeightIntoBsdf(fg) && canFoldWeightIntoBsdf(bg))
             {
                 mixNodes.push_back(node);
             }
@@ -229,9 +242,9 @@ size_t PremultipliedBsdfAddRefactor::execute(ShaderGraph& graph, GenContext& con
         // Fold mix weights into each BSDF side.
         string namePrefix = mixNode->getName();
         ShaderOutput* fgUpstream = foldWeightIntoBsdf(graph, context, fgInput, mixWeightSource,
-                                                      namePrefix + "_fg", mulFloatDef, mulBsdfDef);
+                                                      namePrefix + "_fg", mulFloatDef);
         ShaderOutput* bgUpstream = foldWeightIntoBsdf(graph, context, bgInput, invertOutput,
-                                                      namePrefix + "_bg", mulFloatDef, mulBsdfDef);
+                                                      namePrefix + "_bg", mulFloatDef);
 
         // Create an add node to replace the mix.
         string addName = mixNode->getName() + "_add";
@@ -243,14 +256,8 @@ size_t PremultipliedBsdfAddRefactor::execute(ShaderGraph& graph, GenContext& con
             continue;
         }
 
-        if (fgUpstream)
-        {
-            addIn1->makeConnection(fgUpstream);
-        }
-        if (bgUpstream)
-        {
-            addIn2->makeConnection(bgUpstream);
-        }
+        addIn1->makeConnection(fgUpstream);
+        addIn2->makeConnection(bgUpstream);
 
         // Rewire all downstream connections from the mix output to the add output.
         graph.replaceOutput(mixOutput, addNode->getOutput());

@@ -55,7 +55,10 @@ class MX_GENSHADER_API NodeElisionRefactor : public ShaderGraphRefactor
 /// Transforms mix(A, B, w) into add(A*w, B*(1-w)) by folding
 /// the mix weight into each BSDF's weight input, enabling
 /// hardware shading languages to skip BSDF evaluation when
-/// the weight is zero.
+/// the weight is zero.  A mix node is transformed only when
+/// both of its inputs are connected to BSDFs with weight
+/// inputs that have no other consumers, preserving both the
+/// response and the vertical-layering transmittance of the mix.
 class MX_GENSHADER_API PremultipliedBsdfAddRefactor : public ShaderGraphRefactor
 {
   public:
