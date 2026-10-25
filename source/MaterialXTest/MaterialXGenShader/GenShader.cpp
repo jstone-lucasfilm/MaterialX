@@ -37,6 +37,7 @@
 #include <MaterialXGenSlang/SlangShaderGenerator.h>
 #endif
 
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <vector>
@@ -81,7 +82,99 @@ TEST_CASE("GenShader: Valid Libraries", "[genshader]")
 }
 
 #ifdef MATERIALX_BUILD_GEN_GLSL
-TEST_CASE("GenShader: Duplicate Output Color Transforms", "[genshader]")
+namespace
+{
+
+// A surface shader nodegraph that instantiates a multi-output nodegraph, which reads
+// two files through image nodes and passes a color through unchanged.
+const std::string COMPOUND_COLOR_SPACE_DEFINITIONS = R"(
+  <nodedef name="ND_test_patterns" node="test_patterns">
+    <input name="baseFile" type="filename" uniform="true" value="" />
+    <input name="specFile" type="filename" uniform="true" value="" />
+    <input name="tint" type="color3" value="1, 1, 1" />
+    <output name="base_out" type="color3" />
+    <output name="spec_out" type="color3" />
+    <output name="tint_out" type="color3" />
+  </nodedef>
+  <nodegraph name="NG_test_patterns" nodedef="ND_test_patterns">
+    <image name="baseImage" type="color3">
+      <input name="file" type="filename" interfacename="baseFile" />
+    </image>
+    <image name="specImage" type="color3">
+      <input name="file" type="filename" interfacename="specFile" />
+    </image>
+    <dot name="tintPass" type="color3">
+      <input name="in" type="color3" interfacename="tint" />
+    </dot>
+    <output name="base_out" type="color3" nodename="baseImage" />
+    <output name="spec_out" type="color3" nodename="specImage" />
+    <output name="tint_out" type="color3" nodename="tintPass" />
+  </nodegraph>
+  <nodedef name="ND_test_studio_surface" node="test_studio_surface">
+    <input name="baseFile" type="filename" uniform="true" value="" />
+    <input name="specFile" type="filename" uniform="true" value="" />
+    <input name="tint" type="color3" value="1, 1, 1" />
+    <output name="out" type="surfaceshader" />
+  </nodedef>
+  <nodegraph name="NG_test_studio_surface" nodedef="ND_test_studio_surface">
+    <test_patterns name="patterns" type="multioutput">
+      <input name="baseFile" type="filename" interfacename="baseFile" />
+      <input name="specFile" type="filename" interfacename="specFile" />
+      <input name="tint" type="color3" interfacename="tint" />
+    </test_patterns>
+    <surface_unlit name="surface" type="surfaceshader">
+      <input name="emission_color" type="color3" nodename="patterns" output="base_out" />
+      <input name="transmission_color" type="color3" nodename="patterns" output="spec_out" />
+      <input name="emission" type="float" value="1" />
+    </surface_unlit>
+    <output name="out" type="surfaceshader" nodename="surface" />
+  </nodegraph>)";
+
+// A material referencing a surface shader node named "surface".
+const std::string SURFACE_MATERIAL = R"(
+  <surfacematerial name="material" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="surface" />
+  </surfacematerial>)";
+
+using ColorTransformSet = std::set<std::pair<std::string, std::string>>;
+
+// Return the (node, transform) pairs for all color transform nodes in a shader graph,
+// including those within compound implementations.
+ColorTransformSet collectColorTransforms(const mx::ShaderGraph& graph)
+{
+    ColorTransformSet transforms;
+    for (const mx::ShaderNode* node : graph.getNodes())
+    {
+        if (mx::stringEndsWith(node->getName(), "_cm"))
+        {
+            transforms.insert({ node->getName(), node->getImplementation().getName() });
+        }
+        if (const mx::ShaderGraph* inner = node->getImplementation().getGraph())
+        {
+            for (const auto& transform : collectColorTransforms(*inner))
+            {
+                transforms.insert(transform);
+            }
+        }
+    }
+    return transforms;
+}
+
+// Return the number of function definitions whose names begin with the given prefix.
+size_t functionCount(const std::string& code, const std::string& prefix)
+{
+    size_t count = 0;
+    const std::string definition = "void " + prefix;
+    for (size_t at = code.find(definition); at != std::string::npos; at = code.find(definition, at + 1))
+    {
+        ++count;
+    }
+    return count;
+}
+
+} // anonymous namespace
+
+TEST_CASE("GenShader: Compound Filename Color Spaces", "[genshader]")
 {
     mx::FileSearchPath searchPath = mx::getDefaultDataSearchPath();
     mx::DocumentPtr libraries = mx::createDocument();
@@ -97,45 +190,305 @@ TEST_CASE("GenShader: Duplicate Output Color Transforms", "[genshader]")
     context.registerSourceCodeSearchPath(searchPath);
     context.getOptions().targetColorSpaceOverride = "lin_rec709";
 
-    const std::string docString = R"(<?xml version="1.0"?>
-      <materialx version="1.39" colorspace="lin_rec709">
-        <triplanarprojection name="triplanar" type="color3">
-          <input name="filex" type="filename" value="" colorspace="srgb_texture" />
-          <input name="filey" type="filename" value="" colorspace="srgb_texture" />
-          <input name="filez" type="filename" value="" colorspace="srgb_texture" />
-        </triplanarprojection>
-        <surface_unlit name="surface" type="surfaceshader">
-          <input name="emission_color" type="color3" nodename="triplanar" />
-        </surface_unlit>
-      </materialx>)";
-    mx::DocumentPtr doc = mx::createDocument();
-    mx::readFromXmlString(doc, docString);
-    doc->setDataLibrary(libraries);
+    // Create a document with the given working color space, the test definitions and the given body.
+    auto createTestDocument = [&](const std::string& workingSpace, const std::string& body)
+    {
+        const std::string colorSpaceAttribute = workingSpace.empty() ? "" : " colorspace=\"" + workingSpace + "\"";
+        mx::DocumentPtr doc = mx::createDocument();
+        mx::readFromXmlString(doc, "<?xml version=\"1.0\"?><materialx version=\"1.39\"" + colorSpaceAttribute + ">" +
+                                   COMPOUND_COLOR_SPACE_DEFINITIONS + body + "</materialx>");
+        doc->setDataLibrary(libraries);
+        REQUIRE(doc->validate());
+        return doc;
+    };
 
-    SECTION("Identical input color spaces")
+    // Generate a shader from the element at the given path in a document.
+    auto generate = [&](mx::DocumentPtr doc, const std::string& elementPath)
     {
-        // All three filename inputs request the same output transform.
-    }
-    SECTION("Different input color spaces")
-    {
-        doc->getNode("triplanar")->getInput("filey")->setColorSpace("acescg");
-        doc->getNode("triplanar")->getInput("filez")->setColorSpace("acescg");
-    }
+        mx::ElementPtr element = doc->getDescendant(elementPath);
+        REQUIRE(element);
+        mx::ShaderPtr shader;
+        REQUIRE_NOTHROW(shader = shaderGenerator->generate(element->getName(), element, context));
+        REQUIRE(shader);
+        return shader;
+    };
 
-    REQUIRE(doc->validate());
-    mx::ShaderPtr shader;
-    REQUIRE_NOTHROW(shader = shaderGenerator->generate("surface", doc->getNode("surface"), context));
-    REQUIRE(shader);
-    size_t transformCount = 0;
-    for (const mx::ShaderNode* node : shader->getGraph().getNodes())
+    const std::string singleInstance = R"(
+      <test_studio_surface name="surface" type="surfaceshader">
+        <input name="baseFile" type="filename" value="base.png" colorspace="g22_rec709" />
+        <input name="specFile" type="filename" value="spec.png" colorspace="srgb_texture" />
+        <input name="tint" type="color3" value="0.8, 0.6, 0.4" />
+      </test_studio_surface>)" + SURFACE_MATERIAL;
+    const ColorTransformSet singleInstanceTransforms = {
+        { "baseImage_out_cm", "NG_g22_rec709_to_lin_rec709_color3" },
+        { "specImage_out_cm", "NG_srgb_texture_to_lin_rec709_color3" },
+    };
+
+    SECTION("A library node with multiple filename inputs transforms each at its image node")
     {
-        if (mx::stringEndsWith(node->getName(), "_cm"))
+        // Each filename input of triplanarprojection is transformed within its nodegraph, whether
+        // the inputs share a color space or not, where duplicate output transforms once crashed
+        // shader generation (#3061).
+        for (int differing = 0; differing < 2; ++differing)
         {
-            ++transformCount;
-            CHECK(node->getImplementation().getName() == "NG_srgb_texture_to_lin_rec709_color3");
+            const std::string yzColorSpace = differing ? "acescg" : "srgb_texture";
+            mx::ShaderPtr shader = generate(createTestDocument("lin_rec709", R"(
+              <triplanarprojection name="triplanar" type="color3">
+                <input name="filex" type="filename" value="" colorspace="srgb_texture" />
+                <input name="filey" type="filename" value="" colorspace=")" + yzColorSpace + R"(" />
+                <input name="filez" type="filename" value="" colorspace=")" + yzColorSpace + R"(" />
+              </triplanarprojection>
+              <surface_unlit name="surface" type="surfaceshader">
+                <input name="emission_color" type="color3" nodename="triplanar" />
+              </surface_unlit>)" + SURFACE_MATERIAL), "material");
+            const std::string yzTransform = "NG_" + yzColorSpace + "_to_lin_rec709_color3";
+            const ColorTransformSet expected = {
+                { "N_imgX_color3_out_cm", "NG_srgb_texture_to_lin_rec709_color3" },
+                { "N_imgY_color3_out_cm", yzTransform },
+                { "N_imgZ_color3_out_cm", yzTransform },
+            };
+            CHECK(collectColorTransforms(shader->getGraph()) == expected);
         }
     }
-    CHECK(transformCount == 1);
+
+    SECTION("Each file's color space is applied once, at its own image read")
+    {
+        // The outputs of the compound node, including the untextured pass-through,
+        // receive no additional transforms.
+        mx::ShaderPtr shader = generate(createTestDocument("", singleInstance), "material");
+        CHECK(collectColorTransforms(shader->getGraph()) == singleInstanceTransforms);
+    }
+
+    SECTION("An inherited working space does not replace a declared file color space")
+    {
+        mx::ShaderPtr shader = generate(createTestDocument("lin_rec709", singleInstance), "material");
+        CHECK(collectColorTransforms(shader->getGraph()) == singleInstanceTransforms);
+    }
+
+    SECTION("Generation from the shader node applies the instance's color spaces")
+    {
+        mx::ShaderPtr shader = generate(createTestDocument("", singleInstance), "surface");
+        CHECK(collectColorTransforms(shader->getGraph()) == singleInstanceTransforms);
+    }
+
+    SECTION("Instances declaring different color spaces each get their own function")
+    {
+        mx::ShaderPtr shader = generate(createTestDocument("", R"(
+          <test_studio_surface name="surfaceA" type="surfaceshader">
+            <input name="baseFile" type="filename" value="baseA.png" colorspace="g22_rec709" />
+            <input name="specFile" type="filename" value="specA.png" colorspace="srgb_texture" />
+          </test_studio_surface>
+          <test_studio_surface name="surfaceB" type="surfaceshader">
+            <input name="baseFile" type="filename" value="baseB.png" colorspace="srgb_texture" />
+            <input name="specFile" type="filename" value="specB.png" colorspace="g22_rec709" />
+          </test_studio_surface>
+          <mix name="surface" type="surfaceshader">
+            <input name="fg" type="surfaceshader" nodename="surfaceA" />
+            <input name="bg" type="surfaceshader" nodename="surfaceB" />
+          </mix>)" + SURFACE_MATERIAL), "material");
+
+        // One patterns function per distinct set of declared color spaces.
+        CHECK(functionCount(shader->getSourceCode(mx::Stage::PIXEL), "NG_test_patterns") == 2);
+    }
+
+    SECTION("A multi-output node graph transforms the sampled texture ahead of later operations")
+    {
+        // The transform is applied to the value read from the file, ahead of the
+        // scale and bias of UsdUVTexture (#2353).
+        mx::ShaderPtr shader = generate(createTestDocument("", R"(
+          <UsdUVTexture name="texture" type="multioutput">
+            <input name="file" type="filename" value="color.png" colorspace="srgb_texture" />
+            <input name="scale" type="color4" value="0.5, 0.5, 0.5, 1.0" />
+          </UsdUVTexture>
+          <surface_unlit name="surface" type="surfaceshader">
+            <input name="emission_color" type="color3" nodename="texture" output="rgb" />
+          </surface_unlit>)" + SURFACE_MATERIAL), "material");
+        const ColorTransformSet expected = { { "image_reader_out_cm", "NG_srgb_texture_to_lin_rec709_color4" } };
+        CHECK(collectColorTransforms(shader->getGraph()) == expected);
+    }
+
+    SECTION("A single-output node graph transforms the sampled texture ahead of later operations")
+    {
+        // The transform is applied at the image node, ahead of the power node that follows it (#2353).
+        mx::ShaderPtr shader = generate(createTestDocument("", R"(
+          <nodedef name="ND_test_texture_power" node="test_texture_power">
+            <input name="file" type="filename" uniform="true" value="" />
+            <output name="out" type="color3" />
+          </nodedef>
+          <nodegraph name="NG_test_texture_power" nodedef="ND_test_texture_power">
+            <image name="read" type="color3">
+              <input name="file" type="filename" interfacename="file" />
+            </image>
+            <power name="processed" type="color3">
+              <input name="in1" type="color3" nodename="read" />
+              <input name="in2" type="float" value="2.0" />
+            </power>
+            <output name="out" type="color3" nodename="processed" />
+          </nodegraph>
+          <test_texture_power name="texture" type="color3">
+            <input name="file" type="filename" value="color.png" colorspace="srgb_texture" />
+          </test_texture_power>
+          <surface_unlit name="surface" type="surfaceshader">
+            <input name="emission_color" type="color3" nodename="texture" />
+          </surface_unlit>)" + SURFACE_MATERIAL), "material");
+        const ColorTransformSet expected = { { "read_out_cm", "NG_srgb_texture_to_lin_rec709_color3" } };
+        CHECK(collectColorTransforms(shader->getGraph()) == expected);
+    }
+
+    SECTION("Nested node graphs transform the sampled texture once, at its image read")
+    {
+        // The transform is applied once, within the inner node that reads the file (#2181).
+        mx::ShaderPtr shader = generate(createTestDocument("", R"(
+          <nodedef name="ND_test_image_inner" node="test_image_inner">
+            <input name="file" type="filename" uniform="true" value="" />
+            <output name="output1" type="color3" />
+          </nodedef>
+          <nodegraph name="NG_test_image_inner" nodedef="ND_test_image_inner">
+            <image name="read" type="color3">
+              <input name="file" type="filename" interfacename="file" />
+            </image>
+            <output name="output1" type="color3" nodename="read" />
+          </nodegraph>
+          <nodedef name="ND_test_image_outer" node="test_image_outer">
+            <input name="file" type="filename" uniform="true" value="" />
+            <output name="output1" type="color3" />
+            <output name="output2" type="float" />
+          </nodedef>
+          <nodegraph name="NG_test_image_outer" nodedef="ND_test_image_outer">
+            <test_image_inner name="inner" type="color3">
+              <input name="file" type="filename" interfacename="file" />
+            </test_image_inner>
+            <constant name="half" type="float">
+              <input name="value" type="float" value="0.5" />
+            </constant>
+            <output name="output1" type="color3" nodename="inner" />
+            <output name="output2" type="float" nodename="half" />
+          </nodegraph>
+          <test_image_outer name="outer" type="multioutput">
+            <input name="file" type="filename" value="color.png" colorspace="srgb_texture" />
+          </test_image_outer>
+          <surface_unlit name="surface" type="surfaceshader">
+            <input name="emission_color" type="color3" nodename="outer" output="output1" />
+          </surface_unlit>)" + SURFACE_MATERIAL), "material");
+        const ColorTransformSet expected = { { "read_out_cm", "NG_srgb_texture_to_lin_rec709_color3" } };
+        CHECK(collectColorTransforms(shader->getGraph()) == expected);
+    }
+
+    SECTION("Instances inheriting different scoped color spaces each get their own function")
+    {
+        // Neither instance declares a color space, with one inheriting the document's
+        // working space and the other inheriting srgb_texture from its nodegraph.
+        for (int srgbFirst = 0; srgbFirst < 2; ++srgbFirst)
+        {
+            const std::string linear = "nodename=\"linearTexture\"";
+            const std::string srgb = "nodegraph=\"srgbGraph\" output=\"out\"";
+            mx::ShaderPtr shader = generate(createTestDocument("lin_rec709", R"(
+              <tiledimage name="linearTexture" type="color3">
+                <input name="file" type="filename" value="linear.png" />
+              </tiledimage>
+              <nodegraph name="srgbGraph" colorspace="srgb_texture">
+                <tiledimage name="srgbTexture" type="color3">
+                  <input name="file" type="filename" value="srgb.png" />
+                </tiledimage>
+                <output name="out" type="color3" nodename="srgbTexture" />
+              </nodegraph>
+              <surface_unlit name="surface" type="surfaceshader">
+                <input name="emission_color" type="color3" )" + (srgbFirst ? srgb : linear) + R"( />
+                <input name="transmission_color" type="color3" )" + (srgbFirst ? linear : srgb) + R"( />
+              </surface_unlit>)" + SURFACE_MATERIAL), "material");
+            CHECK(functionCount(shader->getSourceCode(mx::Stage::PIXEL), "NG_tiledimage_color3") == 2);
+            const ColorTransformSet expected = { { "N_img_color3_out_cm", "NG_srgb_texture_to_lin_rec709_color3" } };
+            CHECK(collectColorTransforms(shader->getGraph()) == expected);
+        }
+    }
+
+    SECTION("A context reused across documents does not share a function between working spaces")
+    {
+        const std::string body = R"(
+          <tiledimage name="texture" type="color3">
+            <input name="file" type="filename" value="color.png" />
+          </tiledimage>
+          <surface_unlit name="surface" type="surfaceshader">
+            <input name="emission_color" type="color3" nodename="texture" />
+          </surface_unlit>)" + SURFACE_MATERIAL;
+        mx::ShaderPtr linearShader = generate(createTestDocument("lin_rec709", body), "material");
+        mx::ShaderPtr srgbShader = generate(createTestDocument("srgb_texture", body), "material");
+        CHECK(collectColorTransforms(linearShader->getGraph()).empty());
+        const ColorTransformSet expected = { { "N_img_color3_out_cm", "NG_srgb_texture_to_lin_rec709_color3" } };
+        CHECK(collectColorTransforms(srgbShader->getGraph()) == expected);
+    }
+
+    SECTION("An input bound under a different interface name resolves through its instance")
+    {
+        // The inner input "file" is bound to the interface "tex", so its color space
+        // is found on the enclosing instance.
+        mx::ShaderPtr shader = generate(createTestDocument("", R"(
+          <nodedef name="ND_test_wrap" node="test_wrap">
+            <input name="tex" type="filename" uniform="true" value="" />
+            <output name="out" type="color3" />
+          </nodedef>
+          <nodegraph name="NG_test_wrap" nodedef="ND_test_wrap">
+            <tiledimage name="inner" type="color3">
+              <input name="file" type="filename" interfacename="tex" />
+            </tiledimage>
+            <output name="out" type="color3" nodename="inner" />
+          </nodegraph>
+          <test_wrap name="wrapA" type="color3">
+            <input name="tex" type="filename" value="a.png" colorspace="srgb_texture" />
+          </test_wrap>
+          <test_wrap name="wrapB" type="color3">
+            <input name="tex" type="filename" value="b.png" colorspace="g22_rec709" />
+          </test_wrap>
+          <surface_unlit name="surface" type="surfaceshader">
+            <input name="emission_color" type="color3" nodename="wrapA" />
+            <input name="transmission_color" type="color3" nodename="wrapB" />
+          </surface_unlit>)" + SURFACE_MATERIAL), "material");
+        const std::string code = shader->getSourceCode(mx::Stage::PIXEL);
+        CHECK(functionCount(code, "NG_test_wrap") == 2);
+        CHECK(functionCount(code, "NG_tiledimage_color3") == 2);
+        const ColorTransformSet expected = {
+            { "N_img_color3_out_cm", "NG_srgb_texture_to_lin_rec709_color3" },
+            { "N_img_color3_out_cm", "NG_g22_rec709_to_lin_rec709_color3" },
+        };
+        CHECK(collectColorTransforms(shader->getGraph()) == expected);
+    }
+
+    SECTION("Without a target override, the working space of the document being generated is the target")
+    {
+        // The tiledimage nodegraph belongs to the data library, a document with no color space of its own.
+        context.getOptions().targetColorSpaceOverride.clear();
+        mx::ShaderPtr shader = generate(createTestDocument("lin_rec709", R"(
+          <tiledimage name="texture" type="color3">
+            <input name="file" type="filename" value="color.png" colorspace="srgb_texture" />
+          </tiledimage>
+          <surface_unlit name="surface" type="surfaceshader">
+            <input name="emission_color" type="color3" nodename="texture" />
+          </surface_unlit>)" + SURFACE_MATERIAL), "material");
+        const ColorTransformSet expected = { { "N_img_color3_out_cm", "NG_srgb_texture_to_lin_rec709_color3" } };
+        CHECK(collectColorTransforms(shader->getGraph()) == expected);
+    }
+
+    SECTION("A free-standing node graph applies the color space declared on its filename input")
+    {
+        // The color space is declared on the input of a nodegraph with no nodedef (#2353).
+        mx::DocumentPtr doc = createTestDocument("lin_rec709", R"(
+          <nodegraph name="imageGraph">
+            <input name="myFile" type="filename" value="color.png" colorspace="srgb_texture" />
+            <image name="read" type="color3">
+              <input name="file" type="filename" interfacename="myFile" />
+            </image>
+            <output name="out" type="color3" nodename="read" />
+          </nodegraph>
+          <surface_unlit name="surface" type="surfaceshader">
+            <input name="emission_color" type="color3" nodegraph="imageGraph" output="out" />
+          </surface_unlit>)" + SURFACE_MATERIAL);
+        const ColorTransformSet expected = { { "read_out_cm", "NG_srgb_texture_to_lin_rec709_color3" } };
+        for (const char* elementPath : { "material", "imageGraph/out" })
+        {
+            mx::ShaderPtr shader = generate(doc, elementPath);
+            CHECK(collectColorTransforms(shader->getGraph()) == expected);
+        }
+    }
 }
 #endif
 

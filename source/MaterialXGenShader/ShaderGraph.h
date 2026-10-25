@@ -97,6 +97,22 @@ class MX_GENSHADER_API ShaderGraph : public ShaderNode
     /// Apply color and unit transforms to each input of a node.
     void applyInputTransforms(ConstNodePtr node, ShaderNode* shaderNode, GenContext& context);
 
+    /// Return the color space of the file read by a filename input, resolving
+    /// its interface name through the enclosing node instances.
+    static string resolveFilenameColorSpace(ConstInputPtr input, GenContext& context);
+
+    /// Return the target color space for generated code: the override in the generation
+    /// options if set, otherwise the active color space of the given document or of the
+    /// document containing the outermost parent node.
+    static string getTargetColorSpace(ConstDocumentPtr document, GenContext& context);
+
+    /// Return true if a transform between the given color spaces would be omitted from generated code.
+    static bool isNoOpColorTransform(ColorManagementSystemPtr colorManagementSystem, const string& sourceColorSpace, const string& targetColorSpace);
+
+    /// Return a suffix naming the color transforms that the nodegraph implementation of the given
+    /// nodedef requires for the instance being created, or an empty string if it requires none.
+    static string getColorTransformSuffix(const NodeDef& nodedef, ColorManagementSystemPtr colorManagementSystem, GenContext& context);
+
     /// Create a new node in the graph
     ShaderNode* createNode(ConstNodePtr node, GenContext& context);
 
