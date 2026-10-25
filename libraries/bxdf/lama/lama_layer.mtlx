@@ -14,14 +14,18 @@
     <output name="out" type="BSDF" />
   </nodedef>
   <nodegraph name="NG_lama_layer_bsdf" nodedef="ND_lama_layer_bsdf">
-    <multiply name="mul" type="BSDF">
-      <input name="in1" type="BSDF" interfacename="materialTop" />
-      <input name="in2" type="float" interfacename="topMix" />
-    </multiply>
+    <!-- Top Mix is the top's coverage: where it covers, the base is seen through
+         the top's transmission, and elsewhere the base is seen directly. Scaling
+         the top alone would dim its reflection without uncovering the base. -->
     <layer name="layer" type="BSDF">
-      <input name="top" type="BSDF" nodename="mul" />
+      <input name="top" type="BSDF" interfacename="materialTop" />
       <input name="base" type="BSDF" interfacename="materialBase" />
     </layer>
-    <output name="out" type="BSDF" nodename="layer" />
+    <mix name="coverage" type="BSDF">
+      <input name="fg" type="BSDF" nodename="layer" />
+      <input name="bg" type="BSDF" interfacename="materialBase" />
+      <input name="mix" type="float" interfacename="topMix" />
+    </mix>
+    <output name="out" type="BSDF" nodename="coverage" />
   </nodegraph>
 </materialx>

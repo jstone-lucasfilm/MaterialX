@@ -105,19 +105,47 @@
     </normalize>
 
     <!-- Interior -->
-    <divide name="absorption" type="color3">
-      <input name="in1" type="color3" interfacename="absorptionColor" />
-      <input name="in2" type="float" interfacename="absorptionRadius" />
-    </divide>
-    <convert name="absorption_vector" type="vector3">
-      <input name="in" type="color3" nodename="absorption" />
-    </convert>
-    <convert name="scatter_vector" type="vector3">
+    <!-- The absorption color is the transmittance reached after travelling the
+         absorption radius, so the medium's extinction is -ln(color) / radius. The
+         scatter color is the medium's scattering albedo: it takes its share of that
+         extinction as scattering, and the rest is absorbed. -->
+    <convert name="scatter_albedo" type="vector3">
       <input name="in" type="color3" interfacename="scatterColor" />
     </convert>
+    <convert name="absorption_color_vector" type="vector3">
+      <input name="in" type="color3" interfacename="absorptionColor" />
+    </convert>
+    <clamp name="absorption_color_clamped" type="vector3">
+      <input name="in" type="vector3" nodename="absorption_color_vector" />
+      <input name="low" type="vector3" value="0.00001, 0.00001, 0.00001" />
+      <input name="high" type="vector3" value="1.0, 1.0, 1.0" />
+    </clamp>
+    <ln name="absorption_log" type="vector3">
+      <input name="in" type="vector3" nodename="absorption_color_clamped" />
+    </ln>
+    <max name="absorption_radius_clamped" type="float">
+      <input name="in1" type="float" interfacename="absorptionRadius" />
+      <input name="in2" type="float" value="0.00001" />
+    </max>
+    <divide name="log_per_radius" type="vector3">
+      <input name="in1" type="vector3" nodename="absorption_log" />
+      <input name="in2" type="float" nodename="absorption_radius_clamped" />
+    </divide>
+    <multiply name="extinction" type="vector3">
+      <input name="in1" type="vector3" nodename="log_per_radius" />
+      <input name="in2" type="float" value="-1.0" />
+    </multiply>
+    <multiply name="scattering_rate" type="vector3">
+      <input name="in1" type="vector3" nodename="extinction" />
+      <input name="in2" type="vector3" nodename="scatter_albedo" />
+    </multiply>
+    <subtract name="absorption_rate" type="vector3">
+      <input name="in1" type="vector3" nodename="extinction" />
+      <input name="in2" type="vector3" nodename="scattering_rate" />
+    </subtract>
     <anisotropic_vdf name="interior_vdf" type="VDF">
-      <input name="absorption" type="vector3" nodename="absorption_vector" />
-      <input name="scattering" type="vector3" nodename="scatter_vector" />
+      <input name="absorption" type="vector3" nodename="absorption_rate" />
+      <input name="scattering" type="vector3" nodename="scattering_rate" />
       <input name="anisotropy" type="float" interfacename="scatterAnisotropy" />
     </anisotropic_vdf>
 
